@@ -3,7 +3,7 @@ package configuration
 /*
 Author: Bastien Faivre
 Project: EPFL Master Semester Project
-Description: This file contains the code for the configuration of the proxy.
+Description: This file contains the code to handle the proxy configuration.
 */
 
 import (
@@ -49,7 +49,12 @@ var ErrInvalidConfig = errors.New("invalid config")
 
 // NewConfigManager creates and returns a new ConfigManager.
 func NewConfigManager() *ConfigManager {
-	return &ConfigManager{}
+	return &ConfigManager{
+		Config: Config{
+			Nodes:            []Node{},
+			ResponseNodeAddr: "",
+		},
+	}
 }
 
 // IsValid checks if the config is valid.
