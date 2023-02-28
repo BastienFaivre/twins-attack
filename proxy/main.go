@@ -39,7 +39,7 @@ func proxyRemotesToClient(closeChannel chan bool, dst io.Writer, src []io.Reader
 	closeChannel <- true
 }
 
-// handleConnection handles a connection from local
+// handleConnection handles a connection
 func handleConnection(conn net.Conn) {
 	defer conn.Close()
 	// connect to remote 1 and remote 2
@@ -82,7 +82,7 @@ func main() {
 	defer listener.Close()
 	// start proxy loop
 	for {
-		// accept connection from local
+		// accept connection
 		fmt.Println("Waiting for new connection...")
 		conn, err := listener.Accept()
 		if err != nil {

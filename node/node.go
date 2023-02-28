@@ -18,7 +18,7 @@ import (
 var localAddrPrefix = "127.0.0.1:"
 var nodePort = "8000"
 
-// handleConnection handles a connection from local
+// handleConnection handles a connection
 func handleConnection(conn net.Conn) {
 	defer conn.Close()
 	for {
@@ -66,7 +66,7 @@ func main() {
 	defer listener.Close()
 	// start node loop
 	for {
-		// accept connection from local
+		// accept connection
 		conn, err := listener.Accept()
 		if err != nil {
 			fmt.Println("Error accepting connection:", err)
