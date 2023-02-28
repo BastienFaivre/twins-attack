@@ -3,10 +3,8 @@ package main
 /*
 Author: Bastien Faivre
 Project: EPFL Master Semester Project
-Description: This file contains the code for the client.
+Description: This file contains the code to simulate a client.
 */
-
-// the code is based on https://www.linode.com/docs/guides/developing-udp-and-tcp-clients-and-servers-in-go/#create-the-tcp-client
 
 import (
 	"bufio"

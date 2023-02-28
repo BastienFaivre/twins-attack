@@ -11,6 +11,7 @@ import (
 	"net"
 	"semester-project/proxy/configuration"
 	"semester-project/proxy/logs"
+	"strings"
 )
 
 //------------------------------------------------------------------------------
@@ -28,8 +29,8 @@ var clientLoggers *logs.Loggers
 func proxyClientToNodes(closeChannel chan bool, dst []io.Writer, src io.Reader) {
 	// copy data from client to all destination nodes
 	_, err := io.Copy(io.MultiWriter(dst...), src)
-	if err != nil {
-		clientLoggers.Warning.Println("Error transmitting data from client to nodes:", err)
+	if err != nil && !strings.Contains(err.Error(), "use of closed network connection") {
+		clientLoggers.Error.Println("Error transmitting data from client to nodes:", err)
 	}
 	closeChannel <- true
 }
@@ -38,7 +39,7 @@ func proxyClientToNodes(closeChannel chan bool, dst []io.Writer, src io.Reader) 
 func proxyNodeToClient(closeChannel chan bool, dst io.Writer, src io.Reader) {
 	// copy data from Node to client
 	_, err := io.Copy(dst, src)
-	if err != nil {
+	if err != nil && !strings.Contains(err.Error(), "use of closed network connection") {
 		clientLoggers.Warning.Println("Error transmitting data from node to client:", err)
 	}
 	closeChannel <- true

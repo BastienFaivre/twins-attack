@@ -3,10 +3,8 @@ package main
 /*
 Author: Bastien Faivre
 Project: EPFL Master Semester Project
-Description: This file contains the code for the node server.
+Description: This file contains the code to simulate a node in the network.
 */
-
-// the code is based on https://www.linode.com/docs/guides/developing-udp-and-tcp-clients-and-servers-in-go/#create-the-tcp-server
 
 import (
 	"fmt"
@@ -26,12 +24,7 @@ func handleConnection(conn net.Conn) {
 		data := make([]byte, 1024)
 		n, err := conn.Read(data)
 		if err != nil {
-			// check is connection is closed
-			if err.Error() == "EOF" {
-				fmt.Println("Connection closed by", conn.RemoteAddr())
-			} else {
-				fmt.Println("Error reading data from ", conn.RemoteAddr(), ":", err)
-			}
+			fmt.Println("Connection of", conn.RemoteAddr(), "closed")
 			return
 		}
 		fmt.Println("Data from", conn.RemoteAddr(), ":", string(data[:n-1]))
@@ -71,7 +64,7 @@ func main() {
 		if err != nil {
 			fmt.Println("Error accepting connection:", err)
 		}
-		fmt.Println("Connection accepted from", conn.RemoteAddr())
+		fmt.Println("New connection from", conn.RemoteAddr())
 		// handle connection
 		go handleConnection(conn)
 	}

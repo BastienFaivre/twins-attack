@@ -27,7 +27,6 @@ func configListener(loggers *logs.Loggers, localAddrConfig string, configManager
 	// listen to upcoming configuration connections
 	for {
 		// accept connection
-		loggers.Info.Println("Waiting for new connection...")
 		conn, err := listener.Accept()
 		if err != nil {
 			loggers.Error.Println("Error accepting new connection:", err)
@@ -50,7 +49,6 @@ func clientListener(loggers *logs.Loggers, localAddrClient string, configManager
 	// listen to upcoming client connections
 	for {
 		// accept connection
-		loggers.Info.Println("Waiting for new connection...")
 		conn, err := listener.Accept()
 		if err != nil {
 			loggers.Error.Println("Error accepting new connection:", err)
