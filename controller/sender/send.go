@@ -1,13 +1,18 @@
 package sender
 
-import "net"
-
 /*
 Author: Bastien Faivre
 Project: EPFL Master Semester Project
 Description: This file contains the code to send messages to the proxy.
 */
 
+import "net"
+
+//------------------------------------------------------------------------------
+// Public methods
+//------------------------------------------------------------------------------
+
+// Send sends a message to the proxy.
 func Send(proxyAddr string, message string) error {
 	// connect to the proxy
 	conn, err := net.Dial("tcp", proxyAddr)

@@ -29,7 +29,7 @@ func proxyClientToNodes(closeChannel chan bool, dst []io.Writer, src io.Reader) 
 	// copy data from client to all destination nodes
 	_, err := io.Copy(io.MultiWriter(dst...), src)
 	if err != nil {
-		clientLoggers.Info.Println("Error transmitting data from client to nodes:", err)
+		clientLoggers.Warning.Println("Error transmitting data from client to nodes:", err)
 	}
 	closeChannel <- true
 }
@@ -39,7 +39,7 @@ func proxyNodeToClient(closeChannel chan bool, dst io.Writer, src io.Reader) {
 	// copy data from Node to client
 	_, err := io.Copy(dst, src)
 	if err != nil {
-		clientLoggers.Error.Println("Error transmitting data from node to client:", err)
+		clientLoggers.Warning.Println("Error transmitting data from node to client:", err)
 	}
 	closeChannel <- true
 }

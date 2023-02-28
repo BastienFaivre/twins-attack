@@ -1,5 +1,11 @@
 package messages
 
+/*
+Author: Bastien Faivre
+Project: EPFL Master Semester Project
+Description: This file contains the code to create messages to send to the proxy.
+*/
+
 import (
 	"errors"
 )
@@ -8,6 +14,7 @@ import (
 // Public methods
 //------------------------------------------------------------------------------
 
+// CreateCommandMessage creates a message to send to the proxy.
 func CreateCommandMessage(args []string) (string, error) {
 	// initialize message and error
 	var message string

@@ -1,5 +1,11 @@
 package messages
 
+/*
+Author: Bastien Faivre
+Project: EPFL Master Semester Project
+Description: This file contains the code to build messages to send to the proxy.
+*/
+
 import (
 	"encoding/json"
 	"errors"

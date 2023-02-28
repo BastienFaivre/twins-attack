@@ -1,5 +1,11 @@
 package logs
 
+/*
+Author: Bastien Faivre
+Project: EPFL Master Semester Project
+Description: This file contains the code to log messages.
+*/
+
 import (
 	"io"
 	"log"
@@ -27,12 +33,12 @@ func GetLoggers(filepath string) (*Loggers, *Loggers, error) {
 		output = file
 	}
 	return &Loggers{
-			Info:    log.New(output, "[CLIENT] INFO:    ", log.Ldate|log.Ltime|log.Lshortfile),
-			Warning: log.New(output, "[CLIENT] WARNING: ", log.Ldate|log.Ltime|log.Lshortfile),
-			Error:   log.New(output, "[CLIENT] ERROR:   ", log.Ldate|log.Ltime|log.Lshortfile),
+			Info:    log.New(output, "\033[44;37m[CLIENT]\033[0;32m INFO:    \033[0m", log.Ldate|log.Ltime|log.Lshortfile),
+			Warning: log.New(output, "\033[44;37m[CLIENT]\033[0;33m WARNING: \033[0m", log.Ldate|log.Ltime|log.Lshortfile),
+			Error:   log.New(output, "\033[44;37m[CLIENT]\033[0;31m ERROR:   \033[0m", log.Ldate|log.Ltime|log.Lshortfile),
 		}, &Loggers{
-			Info:    log.New(output, "[CONFIG] INFO:    ", log.Ldate|log.Ltime|log.Lshortfile),
-			Warning: log.New(output, "[CONFIG] WARNING: ", log.Ldate|log.Ltime|log.Lshortfile),
-			Error:   log.New(output, "[CONFIG] ERROR:   ", log.Ldate|log.Ltime|log.Lshortfile),
+			Info:    log.New(output, "\033[43;37m[CONFIG]\033[0;32m INFO:    \033[0m", log.Ldate|log.Ltime|log.Lshortfile),
+			Warning: log.New(output, "\033[43;37m[CONFIG]\033[0;33m WARNING: \033[0m", log.Ldate|log.Ltime|log.Lshortfile),
+			Error:   log.New(output, "\033[43;37m[CONFIG]\033[0;31m ERROR:   \033[0m", log.Ldate|log.Ltime|log.Lshortfile),
 		}, nil
 }
