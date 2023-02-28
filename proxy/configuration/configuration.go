@@ -75,6 +75,7 @@ func (c *Config) IsValid() bool {
 	return true
 }
 
+// ParseConfig parses the config from a string.
 func (cm *ConfigManager) ParseConfig(configStr string) (Config, error) {
 	var config Config
 	err := json.Unmarshal([]byte(configStr), &config)

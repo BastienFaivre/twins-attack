@@ -7,11 +7,18 @@ Description: This file contains the code to handle client connections.
 */
 
 import (
-	"fmt"
 	"io"
 	"net"
 	"semester-project/proxy/configuration"
+	"semester-project/proxy/logs"
 )
+
+//------------------------------------------------------------------------------
+// Private variables
+//------------------------------------------------------------------------------
+
+// loggers is the logger used by the client connection handler.
+var clientLoggers *logs.Loggers
 
 //------------------------------------------------------------------------------
 // Private methods
@@ -22,17 +29,17 @@ func proxyClientToNodes(closeChannel chan bool, dst []io.Writer, src io.Reader) 
 	// copy data from client to all destination nodes
 	_, err := io.Copy(io.MultiWriter(dst...), src)
 	if err != nil {
-		fmt.Println("Error transmitting data from client to nodes:", err)
+		clientLoggers.Info.Println("Error transmitting data from client to nodes:", err)
 	}
 	closeChannel <- true
 }
 
-// proxyNodeToClient copies data from the node connection to the client
+// proxyNodeToClient copies data from the node connection to the client.
 func proxyNodeToClient(closeChannel chan bool, dst io.Writer, src io.Reader) {
 	// copy data from Node to client
 	_, err := io.Copy(dst, src)
 	if err != nil {
-		fmt.Println("Error transmitting data from node to client:", err)
+		clientLoggers.Error.Println("Error transmitting data from node to client:", err)
 	}
 	closeChannel <- true
 }
@@ -41,12 +48,17 @@ func proxyNodeToClient(closeChannel chan bool, dst io.Writer, src io.Reader) {
 // Public methods
 //------------------------------------------------------------------------------
 
+// InitClientLoggers initializes the loggers for the client connection handler.
+func InitClientLoggers(loggers *logs.Loggers) {
+	clientLoggers = loggers
+}
+
 // HandleClientConnection handles a client connection.
 func HandleClientConnection(conn net.Conn, config configuration.Config) {
 	defer conn.Close()
 	// check if the configuration is valid
 	if !config.IsValid() {
-		fmt.Println("Invalid configuration")
+		clientLoggers.Error.Println("Invalid configuration")
 		return
 	}
 	// connect to nodes if any
@@ -57,7 +69,7 @@ func HandleClientConnection(conn net.Conn, config configuration.Config) {
 		for i, node := range config.Nodes {
 			NodeConn, err := net.Dial("tcp", node.Addr)
 			if err != nil {
-				fmt.Println("Error connecting to", node.Addr, ":", err)
+				clientLoggers.Error.Println("Error connecting to", node.Addr, ":", err)
 				return
 			}
 			defer NodeConn.Close()
@@ -82,9 +94,10 @@ func HandleClientConnection(conn net.Conn, config configuration.Config) {
 		}
 	} else {
 		// if there are no nodes, just close the connection
+		clientLoggers.Info.Println("No nodes, closing connection")
 		return
 	}
 	// wait for the goroutines to finish
 	<-closeChannel
-	fmt.Println("Connection of", conn.RemoteAddr(), "closed")
+	clientLoggers.Info.Println("Connection of", conn.RemoteAddr(), "closed")
 }
