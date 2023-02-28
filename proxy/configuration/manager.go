@@ -1,4 +1,4 @@
-package configManager
+package configuration
 
 /*
 Author: Bastien Faivre
@@ -25,8 +25,8 @@ type Node struct {
 // It contains the list of destination nodes and the node to use for the
 // response.
 type Config struct {
-	Nodes           []Node `json:"nodes"`
-	UseResponseFrom string `json:"useResponseFrom"`
+	Nodes            []Node `json:"nodes"`
+	ResponseNodeAddr string `json:"responseNodeAddr"`
 }
 
 // A ConfigManager manages the proxy configuration.
@@ -44,16 +44,6 @@ type ConfigManager struct {
 var ErrInvalidConfig = errors.New("invalid config")
 
 //------------------------------------------------------------------------------
-// Private methods
-//------------------------------------------------------------------------------
-
-// isValid checks if the config is valid.
-func (c *Config) isValid() bool {
-	// check that the nodes array is set
-	return c.Nodes != nil
-}
-
-//------------------------------------------------------------------------------
 // Public methods
 //------------------------------------------------------------------------------
 
@@ -62,13 +52,31 @@ func NewConfigManager() *ConfigManager {
 	return &ConfigManager{}
 }
 
+// IsValid checks if the config is valid.
+func (c *Config) IsValid() bool {
+	// check that the nodes array is set
+	if c.Nodes == nil {
+		return false
+	}
+	// check that if the response node is set, it is in the nodes array
+	if c.ResponseNodeAddr != "" {
+		for _, node := range c.Nodes {
+			if node.Addr == c.ResponseNodeAddr {
+				return true
+			}
+		}
+		return false
+	}
+	return true
+}
+
 func (cm *ConfigManager) ParseConfig(configStr string) (Config, error) {
 	var config Config
 	err := json.Unmarshal([]byte(configStr), &config)
 	if err != nil {
 		return Config{}, err
 	}
-	if !config.isValid() {
+	if !config.IsValid() {
 		return Config{}, ErrInvalidConfig
 	}
 	return config, nil
@@ -76,7 +84,7 @@ func (cm *ConfigManager) ParseConfig(configStr string) (Config, error) {
 
 // GetConfig updates the config if it is valid.
 func (cm *ConfigManager) SetConfig(config Config) error {
-	if !config.isValid() {
+	if !config.IsValid() {
 		return ErrInvalidConfig
 	}
 	cm.ConfigLock.Lock()
@@ -98,6 +106,6 @@ func (c *Config) String() string {
 	for _, node := range c.Nodes {
 		str += "\t\t" + node.Addr + "\n"
 	}
-	str += "\tUseResponseFrom: " + c.UseResponseFrom + "\n"
+	str += "\tUseResponseFrom: " + c.ResponseNodeAddr + "\n"
 	return str
 }

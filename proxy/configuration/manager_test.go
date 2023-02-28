@@ -1,4 +1,4 @@
-package configManager
+package configuration
 
 /*
 Author: Bastien Faivre
@@ -24,18 +24,38 @@ func compareConfig(c1, c2 Config) bool {
 			return false
 		}
 	}
-	return c1.UseResponseFrom == c2.UseResponseFrom
+	return c1.ResponseNodeAddr == c2.ResponseNodeAddr
 }
 
 //------------------------------------------------------------------------------
 // Tests
 //------------------------------------------------------------------------------
 
+func TestValidIsValid(t *testing.T) {
+	config := Config{
+		Nodes: []Node{
+			{Addr: "127.0.0.1:8001"},
+			{Addr: "127.0.0.1:8002"},
+		},
+		ResponseNodeAddr: "127.0.0.1:8001",
+	}
+	if !config.IsValid() {
+		t.Error("Error validating valid config")
+	}
+}
+
+func TestInvalidIsValid(t *testing.T) {
+	config := Config{}
+	if config.IsValid() {
+		t.Error("Error validating invalid config")
+	}
+}
+
 func TestValidParseConfig(t *testing.T) {
 	cm := NewConfigManager()
 	configStr := "{" +
 		"\"nodes\":[{\"addr\":\"127.0.0.1:8001\"}]," +
-		"\"useResponseFrom\":\"127.0.0.1:8001\"" +
+		"\"responseNodeAddr\":\"127.0.0.1:8001\"" +
 		"}"
 	_, err := cm.ParseConfig(configStr)
 	if err != nil {
@@ -64,7 +84,7 @@ func TestValidSetConfig(t *testing.T) {
 	cm := NewConfigManager()
 	configStr := "{" +
 		"\"nodes\":[{\"addr\":\"127.0.0.1:8001\"}]," +
-		"\"useResponseFrom\":\"127.0.0.1:8001\"" +
+		"\"responseNodeAddr\":\"127.0.0.1:8001\"" +
 		"}"
 	config, err := cm.ParseConfig(configStr)
 	if err != nil {
@@ -92,7 +112,7 @@ func TestGetConfig(t *testing.T) {
 	cm := NewConfigManager()
 	configStr := "{" +
 		"\"nodes\":[{\"addr\":\"127.0.0.1:8001\"}]," +
-		"\"useResponseFrom\":\"127.0.0.1:8001\"" +
+		"\"responseNodeAddr\":\"127.0.0.1:8001\"" +
 		"}"
 	config, err := cm.ParseConfig(configStr)
 	if err != nil {
