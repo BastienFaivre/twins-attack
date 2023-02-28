@@ -3,7 +3,7 @@ package configuration
 /*
 Author: Bastien Faivre
 Project: EPFL Master Semester Project
-Description: This file contains the code for the config manager of the proxy.
+Description: This file contains the code for the configuration of the proxy.
 */
 
 import (
