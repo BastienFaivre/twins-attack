@@ -11,6 +11,8 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"strings"
+	"time"
 )
 
 // for debugging purpose, the remote address is hard-coded
@@ -50,13 +52,19 @@ func main() {
 			fmt.Println("Error sending data to remote:", err)
 			os.Exit(1)
 		}
-		// read response from remote
+		// read reponse from remote
 		fmt.Println("Waiting for response from remote...")
+		conn.SetReadDeadline(time.Now().Add(2 * time.Second))
 		response := make([]byte, 1024)
 		_, err = conn.Read(response)
 		if err != nil {
-			fmt.Println("Error reading response from remote:", err)
-			os.Exit(1)
+			if strings.Contains(err.Error(), "i/o timeout") {
+				fmt.Println("No response from remote")
+				continue
+			} else {
+				fmt.Println("Error reading response from remote:", err)
+				os.Exit(1)
+			}
 		}
 		fmt.Println("Response from remote:", string(response))
 	}
