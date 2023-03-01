@@ -33,12 +33,12 @@ func GetLoggers(filepath string) (*Loggers, *Loggers, error) {
 		output = file
 	}
 	return &Loggers{
-			Info:    log.New(output, "\033[44;37m[CLIENT]\033[0;32m INFO:    \033[0m", log.Ldate|log.Ltime|log.Lshortfile),
-			Warning: log.New(output, "\033[44;37m[CLIENT]\033[0;33m WARNING: \033[0m", log.Ldate|log.Ltime|log.Lshortfile),
-			Error:   log.New(output, "\033[44;37m[CLIENT]\033[0;31m ERROR:   \033[0m", log.Ldate|log.Ltime|log.Lshortfile),
+			Info:    log.New(output, "\033[44;37m[CLIENT]\033[0m INFO:    \033[0m", log.Ldate|log.Ltime),
+			Warning: log.New(output, "\033[44;37m[CLIENT]\033[0;33m WARNING: \033[0m", log.Ldate|log.Ltime),
+			Error:   log.New(output, "\033[44;37m[CLIENT]\033[0;31m ERROR:   \033[0m", log.Ldate|log.Ltime),
 		}, &Loggers{
-			Info:    log.New(output, "\033[43;37m[CONFIG]\033[0;32m INFO:    \033[0m", log.Ldate|log.Ltime|log.Lshortfile),
-			Warning: log.New(output, "\033[43;37m[CONFIG]\033[0;33m WARNING: \033[0m", log.Ldate|log.Ltime|log.Lshortfile),
-			Error:   log.New(output, "\033[43;37m[CONFIG]\033[0;31m ERROR:   \033[0m", log.Ldate|log.Ltime|log.Lshortfile),
+			Info:    log.New(output, "\033[43;37m[CONFIG]\033[0m INFO:    \033[0m", log.Ldate|log.Ltime),
+			Warning: log.New(output, "\033[43;37m[CONFIG]\033[0;33m WARNING: \033[0m", log.Ldate|log.Ltime),
+			Error:   log.New(output, "\033[43;37m[CONFIG]\033[0;31m ERROR:   \033[0m", log.Ldate|log.Ltime),
 		}, nil
 }
