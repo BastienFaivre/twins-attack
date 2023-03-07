@@ -3,7 +3,7 @@
 # Source: https://github.com/Blockchain-Benchmarking/minion/blob/cleanup/script/remote/linux/apt/install-quorum
 
 # import utility functions
-. utils/utils.sh
+. remote/utils/utils.sh
 
 QUORUM_URL='https://github.com/Consensys/quorum.git'
 QUORUM_BRANCH='919800f019cc5d2b931b5cd81600640a8e7cd444'
@@ -23,9 +23,15 @@ install-go() {
   sudo tar -C /usr/local -xzf go1.20.1.linux-amd64.tar.gz
   rm go1.20.1.linux-amd64.tar.gz
   # export in .bashrc if not already there
-  if ! grep ~/.bashrc -e "/usr/local/go/bin"
+  if ! grep ~/.profile -e "/usr/local/go/bin"
   then
-    echo "export PATH=\$PATH:/usr/local/go/bin" >> ~/.bashrc
+    echo "export PATH=\$PATH:/usr/local/go/bin" >> ~/.profile
+  fi
+  source ~/.profile
+  if ! command -v go &> /dev/null
+  then
+    utils::err "Go command not found after installation"
+    exit 1
   fi
 }
 
@@ -56,9 +62,7 @@ utils::exec_cmd "install-necessary-packages" "Install necessary packages"
 if ! command -v go &> /dev/null
 then
   utils::exec_cmd "install-go" "Install Go"
-  echo "Please run 'source ~/.bashrc' to update your PATH and re-run this script"
-  trap - ERR
-  exit 0
+  source ~/.profile
 fi
 utils::exec_cmd "initialize-directories" "Initialize directories"
 utils::exec_cmd "clone-and-build-quorum" "Clone and build Quorum"
