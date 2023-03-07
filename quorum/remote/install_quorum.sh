@@ -63,6 +63,11 @@ if ! command -v go &> /dev/null
 then
   utils::exec_cmd "install-go" "Install Go"
   source ~/.profile
+  if ! command -v go &> /dev/null
+  then
+    utils::err "Go command not found after installation"
+    exit 1
+  fi
 fi
 utils::exec_cmd "initialize-directories" "Initialize directories"
 utils::exec_cmd "clone-and-build-quorum" "Clone and build Quorum"
