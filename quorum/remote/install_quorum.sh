@@ -10,11 +10,13 @@
 
 utils::ask_sudo
 
+# install necessary packages
 install_necessary_packages() {
   sudo apt-get update
   sudo apt-get install -y git make build-essential wget
 }
 
+# install go
 install_go() {
   wget $GO_URL > /dev/null 2>&1
   sudo rm -rf /usr/local/go
