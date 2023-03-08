@@ -18,5 +18,5 @@ number_of_accounts=$1
 hosts_array=($(utils::create_remote_hosts_list $HOST $PORT $NUMBER_OF_HOSTS))
 host=${hosts_array[0]}
 # generate accounts
-cmd="./remote/generate_accounts.sh $number_of_accounts"
+cmd="./remote/generate-accounts.sh $number_of_accounts"
 utils::exec_cmd_on_remote_hosts "$cmd" 'Generating accounts' $host
