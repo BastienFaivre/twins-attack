@@ -171,6 +171,7 @@ generate() {
   rm -rf $NETWORK_ROOT
 }
 
+# finalize the network by initializing each node
 finalize() {
   local genesis=$DEPLOY_ROOT/genesis.json
   local static_nodes=$DEPLOY_ROOT/static-nodes.json
@@ -180,7 +181,19 @@ finalize() {
   if [ -d "$NETWORK_ROOT" ]; then
     rm -rf $NETWORK_ROOT
   fi
-  # ???
+  # iterate over all nodes directories
+  for dir in $DEPLOY_ROOT/n*; do
+    # check that dir is a directory
+    if [ ! -d "$dir" ]; then
+      continue
+    fi
+    # copy the static-nodes.json file to the node directory
+    cp $static_nodes $dir/static-nodes.json
+    # initialize the node
+    geth --datadir $dir init $genesis > /dev/null 2>&1
+  done
+  # remove the genesis.json and static-nodes.json files
+  rm $genesis $static_nodes
 }
 
 # check that at least one argument has been provided
