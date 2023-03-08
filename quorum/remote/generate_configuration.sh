@@ -33,6 +33,7 @@ setup_environment() {
   fi
 }
 
+# prepare all hosts by creating the deploy directory
 prepare() {
   # check that no more arguments are provided
   if [ $# -ne 0 ]; then
@@ -45,6 +46,7 @@ prepare() {
   mkdir -p $DEPLOY_ROOT
 }
 
+# prepare the network root directory and create a directory for each node
 prepare_network_root() {
   # retrieve arguments
   local number_of_nodes="${1}"
@@ -59,18 +61,18 @@ prepare_network_root() {
   done
 }
 
+# set the ip and port of each node in the static-nodes.json file
 set_nodes_ip_port() {
   # retrieve arguments
   local static_nodes_file="${1}"
   local nodefile="${2}"
   # create a temporary file
-  local tmp_file="$static_nodes_file.tmp"
   index=1
   # read the static-nodes.json file
   while IFS= read -r line; do
-    # skip if the line is empty or it is not an enode uri
-    if [[ -z "$line" ]] || [[ ! "$line" =~ ^enode://.* ]]; then
-      echo "oui" >> $tmp_file
+    # check if the line contains the string "enode"
+    if [[ ! $line == *"enode"* ]]; then
+      echo "$line"
       continue
     fi
     # retrieve node ip and port from the nodefile
@@ -78,13 +80,61 @@ set_nodes_ip_port() {
     local node_ip=$(echo $node | cut -d: -f1)
     local node_port=$(echo $node | cut -d: -f2)
     # replace the ip and port in the enode uri
-    echo "$node_ip:$node_port\n" >> $tmp_file
+    local new_line=$(echo $line | sed "s/@.*?/@$node_ip:$node_port?/")
+    echo "$new_line"
+    # increment the index
     index=$((index + 1))
-    done < $static_nodes_file
-    # replace the static-nodes.json file
-    mv $tmp_file "$static_nodes_file.tmp"
+  done < $static_nodes_file > "$static_nodes_file.tmp"
+  echo ']' >> "$static_nodes_file.tmp"
+  # replace the static-nodes.json file
+  mv "$static_nodes_file.tmp" $static_nodes_file
 }
 
+# set the account address and balance present in the keyfile in the genesis.json file
+initialize_accounts() {
+  # retrieve arguments
+  local genesis="${1}"
+  local keyfile="${2}"
+  # read the genesis file
+  while IFS= read -r line; do
+    echo "$line"
+    # check if the line contains the string "alloc"
+    if [[ $line == *"alloc"* ]]; then
+      while IFS= read -r account; do
+        address=$(echo $account | cut -d: -f1)
+        printf "        \"%s\": {\n" "${address}"
+		    printf "            \"balance\": \"%s\"\n" "${BALANCE}"
+		    printf "        },\n"
+      done < $keyfile
+    fi
+  done < $genesis > "$genesis.tmp"
+  echo '}' >> "$genesis.tmp"
+  # replace the genesis file
+  mv "$genesis.tmp" $genesis
+}
+
+# fill the nodes directory with the nodekey, port and rpc port files
+initialize_nodes() {
+  # retrieve arguments
+  local nodefile="${1}"
+  local number_of_nodes="${2}"
+  # initialize nodes
+  for i in $(seq 0 $((number_of_nodes - 1))); do
+    # retrieve node port and rpc port from the nodefile
+    local node=$(sed -n "$((i+1))p" $nodefile)
+    local node_port=$(echo $node | cut -d: -f2)
+    local rpc_port=$(echo $node | cut -d: -f3)
+    # copy the nodekey to the node directory and remove the old directory
+    cp $NETWORK_ROOT/$i/nodekey $NETWORK_ROOT/n$i/nodekey
+    chmod 644 $NETWORK_ROOT/n$i/nodekey
+    rm -rf $NETWORK_ROOT/$i
+    # add port and rpc port files to the node directory
+    echo $node_port > $NETWORK_ROOT/n$i/port
+    echo $rpc_port > $NETWORK_ROOT/n$i/rpcport
+  done
+}
+
+# generate the configuration file for quorum
 generate() {
   if [ $# -ne 2 ]; then
     echo "Usage: $0 generate <nodefile> <keyfile>"
@@ -111,7 +161,33 @@ generate() {
   )
   # set nodes ip and port
   set_nodes_ip_port "$NETWORK_ROOT/static-nodes.json" $nodefile
+  # initialize accounts
+  initialize_accounts "$NETWORK_ROOT/genesis.json" $keyfile
+  # initialize nodes
+  initialize_nodes $nodefile $number_of_nodes
+  # zip the network root
+  tar -C $DEPLOY_ROOT -czf $NETWORK_ROOT.tar.gz 'network'
+  # remove the network root
+  rm -rf $NETWORK_ROOT
 }
+
+finalize() {
+  local genesis=$DEPLOY_ROOT/genesis.json
+  local static_nodes=$DEPLOY_ROOT/static-nodes.json
+  # check that the installation has been completed
+  setup_environment
+  # remove network root if it exists
+  if [ -d "$NETWORK_ROOT" ]; then
+    rm -rf $NETWORK_ROOT
+  fi
+  # ???
+}
+
+# check that at least one argument has been provided
+if [ $# -eq 0 ]; then
+  echo "Usage: $0 <action> [options...]"
+  exit 1
+fi
 
 # read action
 action=$1; shift
@@ -124,6 +200,10 @@ case $action in
   'generate')
     cmd="generate $@"
     utils::exec_cmd "$cmd" 'Generate configuration files'
+    ;;
+  'finalize')
+    cmd="finalize $@"
+    utils::exec_cmd "$cmd" 'Finalize configuration'
     ;;
   *)
     echo "Usage: $0 <action> [options...]"

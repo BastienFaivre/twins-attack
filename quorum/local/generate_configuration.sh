@@ -14,4 +14,4 @@ utils::exec_cmd_on_remote_hosts './remote/generate_configuration.sh prepare' 'Pr
 # select the first host
 host=${hosts_array[0]}
 # generate the configuration file
-utils::exec_cmd_on_remote_hosts './remote/generate_configuration.sh generate remote/nodes.conf remote/keyfile.conf' 'Generating configuration file' $host
+utils::exec_cmd_on_remote_hosts './remote/generate_configuration.sh generate remote/nodefile.conf remote/keyfile.conf' 'Generating configuration file' $host
