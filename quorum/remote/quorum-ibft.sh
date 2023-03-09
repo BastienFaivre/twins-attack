@@ -34,7 +34,6 @@ setup_environment() {
 }
 
 start() {
-  # ???
   export PRIVATE_CONFIG=ignore
   # start the nodes
   for dir in $DEPLOY_ROOT/n*; do
@@ -71,8 +70,8 @@ start() {
     pid=$!
     echo $pid > $dir/pid
   done
-  # ???
-  # sleep 10
+  # make sure that the nodes are started and connected
+  sleep 5
 }
 
 _kill() {

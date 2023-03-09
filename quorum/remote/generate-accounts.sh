@@ -10,13 +10,36 @@
 
 utils::ask_sudo
 
+# check that the installation has been completed
+setup_environment() {
+  # check that quorum is installed
+  if [ ! -d "$INSTALL_ROOT" ]; then
+    echo 'Quorum is not installed. Please run install_quorum.sh first.'
+    exit 1
+  fi
+  # export bin directories
+  export PATH="$PATH:$HOME/$INSTALL_ROOT/build/bin"
+  export PATH="$PATH:$HOME/$INSTALL_ROOT/istanbul-tools/build/bin"
+  # check that the geth and istanbul commands are available
+  if ! command -v geth &> /dev/null
+  then
+    utils::err "Geth command not found in $INSTALL_ROOT/build/bin"
+    exit 1
+  fi
+  if ! command -v istanbul &> /dev/null
+  then
+    utils::err "Istanbul command not found in $INSTALL_ROOT/istanbul-tools/build/bin"
+    exit 1
+  fi
+}
+
 # install necessary packages
 install_necessary_packages() {
   sudo apt-get update
   sudo apt-get install -y software-properties-common
   sudo add-apt-repository -y ppa:ethereum/ethereum
   sudo apt-get update
-  sudo apt-get install -y geth python3 python3-pip
+  sudo apt-get install -y python3 python3-pip
   sudo pip3 install web3
 }
 
@@ -66,6 +89,8 @@ generate_accounts() {
     echo "$address:$private" >> $ACCOUNTS_ROOT/accounts.txt
   done
 }
+
+setup_environment
 
 # read argument
 if [ $# -ne 1 ]; then
