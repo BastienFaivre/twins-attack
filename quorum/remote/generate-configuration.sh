@@ -43,6 +43,9 @@ prepare() {
   # check that the installation has been completed
   setup_environment
   # create deploy directory
+  if [ -d "$DEPLOY_ROOT" ]; then
+    rm -rf $DEPLOY_ROOT
+  fi
   mkdir -p $DEPLOY_ROOT
 }
 
