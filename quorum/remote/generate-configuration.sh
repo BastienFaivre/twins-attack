@@ -148,6 +148,15 @@ generate() {
   # retrieve arguments
   local nodefile="${1}"
   local keyfile="${2}"
+  # check that the nodefile and keyfile exist
+  if [ ! -f "$nodefile" ]; then
+    utils::err "Nodefile $nodefile does not exist"
+    exit 1
+  fi
+  if [ ! -f "$keyfile" ]; then
+    utils::err "Keyfile $keyfile does not exist"
+    exit 1
+  fi
   # count the number of nodes
   local number_of_nodes=$(wc -l < $nodefile)
   # prepare network root

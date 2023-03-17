@@ -35,6 +35,12 @@ retrieve_configuration() {
     utils::err 'Failed to retrieve configuration file'
     exit 1
   fi
+  # copy the accounts file to the local host
+  scp -P ${host_array[1]} ${host_array[0]}:~/install/geth-accounts/accounts.txt ./tmp/accounts.txt
+  if [ $? -ne 0 ]; then
+    utils::err 'Failed to retrieve accounts file'
+    exit 1
+  fi
 }
 cmd="retrieve_configuration $host"
 utils::exec_cmd "$cmd" 'Retrieving configuration file'
