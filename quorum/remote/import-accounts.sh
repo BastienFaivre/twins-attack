@@ -1,5 +1,5 @@
 #!/bin/bash
-# Import accounts to the node
+# Import accounts to all nodes of remote host
 
 # read environment file
 . remote/remote.env
@@ -37,7 +37,7 @@ setup_environment() {
   fi
 }
 
-# import accounts to the node
+# import accounts all nodes on remote host
 import_accounts() {
   # retrieve private keys
   local private_keys_file="$1"
@@ -46,22 +46,25 @@ import_accounts() {
     echo "The private keys file $private_keys_file does not exist."
     exit 1
   fi
-  # retrieve the directory of the node
-  local node_directory="$(ls -d $DEPLOY_ROOT/n*/)"
-  # remove trailing slash
-  node_directory="$(echo $node_directory | sed 's:/*$::')"
-  # import accounts
-  while IFS= read -r line; do
-    # retrieve account password and private key
-    local password="$(echo $line | cut -d':' -f1)"
-    local key="$(echo $line | cut -d':' -f2)"
-    # write private key to temporary file
-    echo $key > ./tmp.key
-    # import account
-    printf "%d\n%d\n" $password $password | geth account import --datadir $node_directory ./tmp.key
-    # remove temporary file
-    rm ./tmp.key
-  done < "$private_keys_file"
+  # iterate over all nodes directories
+  for dir in $DEPLOY_ROOT/n*; do
+    # check that dir is a directory
+    if [ ! -d "$dir" ]; then
+      continue
+    fi
+    # import accounts
+    while IFS= read -r line; do
+      # retrieve account password and private key
+      local password="$(echo $line | cut -d':' -f1)"
+      local key="$(echo $line | cut -d':' -f2)"
+      # write private key to temporary file
+      echo $key > ./tmp.key
+      # import account
+      printf "%d\n%d\n" $password $password | geth account import --datadir $dir ./tmp.key
+      # remove temporary file
+      rm ./tmp.key
+    done < "$private_keys_file"
+  done
 }
 
 setup_environment

@@ -54,16 +54,18 @@ utils::exec_cmd 'extract_configuration' 'Extracting configuration file'
 # create each node configuration file
 create_node_configuration() {
   for dir in ./tmp/n*; do
-    # check that dir is a directory
-    if [ ! -d "$dir" ]; then
+    # check that dir is a directory and not a twin directory
+    if [ ! -d "$dir" ] || [[ "$dir" == *"twin"* ]]; then
       continue
     fi
     mkdir -p ./tmp/tmp
     # copy the genesis.json and static-nodes.json files
     cp ./tmp/genesis.json ./tmp/tmp
     cp ./tmp/static-nodes.json ./tmp/tmp
+    cp ./tmp/static-nodes.json.twin ./tmp/tmp
     # copy the node directory
     cp -r "$dir" ./tmp/tmp
+    cp -r "${dir}_twin" ./tmp/tmp
     # archive the node directory
     tar -czf "${dir}.tar.gz" -C ./tmp/tmp .
     # remove the tmp directory

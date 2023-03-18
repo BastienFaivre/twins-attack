@@ -61,6 +61,7 @@ prepare_network_root() {
   # create a directory for each node
   for i in $(seq 0 $((number_of_nodes - 1))); do
     mkdir $NETWORK_ROOT/n$i
+    mkdir $NETWORK_ROOT/n${i}_twin
   done
 }
 
@@ -69,26 +70,33 @@ set_nodes_ip_port() {
   # retrieve arguments
   local static_nodes_file="${1}"
   local nodefile="${2}"
+  # create a twin file
+  local static_nodes_file_twin="$static_nodes_file.twin"
   # create a temporary file
   local index=1
   # read the static-nodes.json file
   while IFS= read -r line; do
     # check if the line contains the string "enode"
     if [[ ! $line == *"enode"* ]]; then
-      echo "$line"
+      echo "$line" >> "$static_nodes_file.tmp"
+      echo "$line" >> "$static_nodes_file_twin"
       continue
     fi
     # retrieve node ip and port from the nodefile
     local node=$(sed -n "${index}p" $nodefile)
     local node_ip=$(echo $node | cut -d: -f1)
     local node_port=$(echo $node | cut -d: -f2)
+    local node_port_twin=$(echo $node | cut -d: -f4)
     # replace the ip and port in the enode uri
     local new_line=$(echo $line | sed "s/@.*?/@$node_ip:$node_port?/")
-    echo "$new_line"
+    echo "$new_line" >> "$static_nodes_file.tmp"
+    local new_line_twin=$(echo $line | sed "s/@.*?/@$node_ip:$node_port_twin?/")
+    echo "$new_line_twin" >> "$static_nodes_file_twin"
     # increment the index
     index=$((index + 1))
-  done < $static_nodes_file > "$static_nodes_file.tmp"
+  done < $static_nodes_file
   echo ']' >> "$static_nodes_file.tmp"
+  echo ']' >> "$static_nodes_file_twin"
   # replace the static-nodes.json file
   mv "$static_nodes_file.tmp" $static_nodes_file
 }
@@ -127,13 +135,19 @@ initialize_nodes() {
     local node=$(sed -n "$((i+1))p" $nodefile)
     local node_port=$(echo $node | cut -d: -f2)
     local rpc_port=$(echo $node | cut -d: -f3)
+    local node_port_twin=$(echo $node | cut -d: -f4)
+    local rpc_port_twin=$(echo $node | cut -d: -f5)
     # copy the nodekey to the node directory and remove the old directory
     cp $NETWORK_ROOT/$i/nodekey $NETWORK_ROOT/n$i/nodekey
+    cp $NETWORK_ROOT/$i/nodekey $NETWORK_ROOT/n${i}_twin/nodekey
     chmod 644 $NETWORK_ROOT/n$i/nodekey
+    chmod 644 $NETWORK_ROOT/n${i}_twin/nodekey
     rm -rf $NETWORK_ROOT/$i
     # add port and rpc port files to the node directory
     echo $node_port > $NETWORK_ROOT/n$i/port
     echo $rpc_port > $NETWORK_ROOT/n$i/rpcport
+    echo $node_port_twin > $NETWORK_ROOT/n${i}_twin/port
+    echo $rpc_port_twin > $NETWORK_ROOT/n${i}_twin/rpcport
   done
 }
 
@@ -199,13 +213,17 @@ finalize() {
     if [ ! -d "$dir" ]; then
       continue
     fi
-    # copy the static-nodes.json file to the node directory
-    cp $static_nodes $dir/static-nodes.json
+    # copy the right static-nodes.json file to the node directory
+    if [[ $dir == *"twin"* ]]; then
+      cp $static_nodes.twin $dir/static-nodes.json
+    else
+      cp $static_nodes $dir/static-nodes.json
+    fi
     # initialize the node
     geth --datadir $dir init $genesis > /dev/null 2>&1
   done
   # remove the genesis.json and static-nodes.json files
-  rm $genesis $static_nodes
+  rm $genesis $static_nodes $static_nodes.twin
 }
 
 # check that at least one argument has been provided

@@ -34,12 +34,18 @@ setup_environment() {
 }
 
 start() {
+  # retrieve arguments
+  local twins="${1}"
   export PRIVATE_CONFIG=ignore
   # start the nodes
   for dir in $DEPLOY_ROOT/n*; do
     # check that dir is a directory
     if [ ! -d "$dir" ]; then
     continue
+    fi
+    # if twins argument is not provided, ignore twin nodes
+    if [ -z "$twins" ] && [[ $dir == *"twin"* ]]; then
+      continue
     fi
     # retrieve node port and rpc port
     port=$(cat $dir/port)
@@ -108,15 +114,21 @@ nkill() {
 setup_environment
 
 # read argument
-if [ $# -ne 1 ]; then
-  echo "Usage: $0 start|stop|kill"
+if [ $# -lt 1 ]; then
+  echo "Usage: $0 start|stop|kill [twins]"
   exit 1
 fi
 action=$1; shift
+twins=$1; shift
+if [ ! -z "$twins" ] && [ "$twins" != "twins" ]; then
+  echo "Usage: $0 start|stop|kill [twins]"
+  exit 1
+fi
 
 case $action in
   start)
-    utils::exec_cmd start "Start all nodes"
+    cmd="start $twins"
+    utils::exec_cmd "$cmd" "Start all nodes"
     ;;
   stop)
     utils::exec_cmd stop "Stop all nodes"
@@ -125,7 +137,7 @@ case $action in
     utils::exec_cmd nkill "Kill all nodes"
     ;;
   *)
-    echo "Usage: $0 start|stop|kill"
+    echo "Usage: $0 start|stop|kill [twins]"
     exit 1
     ;;
 esac
