@@ -66,6 +66,8 @@ start() {
       --ws.origins "*" \
       --emitcheckpoints \
       --port $port \
+      --http \
+      --http.port $rpcport \
       > $dir/out.log 2> $dir/err.log &
     pid=$!
     echo $pid > $dir/pid
