@@ -47,11 +47,11 @@ import_accounts() {
     exit 1
   fi
   # retrieve the directory of the node
-  local node_directory="$(ls -d $DEPLOY_ROOT/n*/)" | rev | cut -c2- | rev
+  local node_directory="$(ls -d $DEPLOY_ROOT/n*/)"
+  # remove trailing slash
+  node_directory="$(echo $node_directory | sed 's:/*$::')"
   # import accounts
   while IFS= read -r line; do
-    # increment line number
-    line_number=$((line_number+1))
     # retrieve account password and private key
     local password="$(echo $line | cut -d':' -f1)"
     local key="$(echo $line | cut -d':' -f2)"
@@ -73,6 +73,5 @@ if [ $# -ne 1 ]; then
 fi
 private_keys_file="$1"
 
-# cmd="import_accounts $private_keys_file"
-# utils::exec_cmd "$cmd" "Import accounts to the node"
-import_accounts $private_keys_file
+cmd="import_accounts $private_keys_file"
+utils::exec_cmd "$cmd" "Import accounts to the node"
