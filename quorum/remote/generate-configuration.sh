@@ -70,7 +70,7 @@ set_nodes_ip_port() {
   local static_nodes_file="${1}"
   local nodefile="${2}"
   # create a temporary file
-  index=1
+  local index=1
   # read the static-nodes.json file
   while IFS= read -r line; do
     # check if the line contains the string "enode"
