@@ -18,4 +18,4 @@ export_scripts() {
 }
 
 # export all scripts
-utils::exec_cmd 'export_scripts' 'Exporting scripts to remote hosts'
+utils::exec_cmd 'export_scripts' 'Export scripts to remote hosts'
