@@ -1,9 +1,12 @@
 #!/bin/bash
-#
-# Define a set of utility functions
+#===============================================================================
+# Author: Bastien Faivre
+# Project: EPFL Master Semester Project
+# Date: March 2023
+# Description: Define a set of utility functions
 # Source: https://github.com/BastienFaivre/bash-scripts/blob/main/utils/utils.sh
+#===============================================================================
 
-#######################################
 # Show an error
 # Globals:
 #   None
@@ -15,12 +18,10 @@
 #   None
 # Sources:
 #   https://google.github.io/styleguide/shellguide.html#stdout-vs-stderr
-#######################################
 utils::err() {
   echo -e "[$(date +'%Y-%m-%d %H:%M:%S')] \033[0;31mERROR:\033[0m $*" >&2
 }
 
-#######################################
 # Ask for sudo
 # Globals:
 #   None
@@ -30,7 +31,6 @@ utils::err() {
 #   Writes error to stderr if sudo refused
 # Returns:
 #   None
-#######################################
 utils::ask_sudo() {
   # Ask for super user
   sudo -v > /dev/null 2>&1
@@ -40,7 +40,6 @@ utils::ask_sudo() {
   fi
 }
 
-#######################################
 # Execute a command while displaying a loader
 # Globals:
 #   None
@@ -51,7 +50,6 @@ utils::ask_sudo() {
 #   Writes loader and command explanation to stdout
 # Returns:
 #   1 if the command failed, 0 otherwise
-#######################################
 utils::exec_cmd() {
   # retrieve arguments
   local cmd="${1}"

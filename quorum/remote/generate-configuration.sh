@@ -1,104 +1,146 @@
 #!/bin/bash
-# Generate configuration files for Quorum
+#===============================================================================
+# Modified by: Bastien Faivre
+# Project: EPFL Master Semester Project
+# Date: March 2023
+# Description: Generate configuration files for Quorum
 # Source: https://github.com/Blockchain-Benchmarking/minion/blob/cleanup/script/remote/deploy-quorum-ibft-worker
+#===============================================================================
 
-# read environment file
+#===============================================================================
+# IMPORTS
+#===============================================================================
+
 . remote/remote.env
-
-# import utility functions
 . remote/utils/utils.sh
 
-utils::ask_sudo
+#===============================================================================
+# FUNCTIONS
+#===============================================================================
 
-# check that the installation has been completed
+# Check that the necessary commands are available and export them
+# Globals:
+#   None
+# Arguments:
+#   None
+# Outputs:
+#   None
+# Returns:
+#   None
 setup_environment() {
-  # check that quorum is installed
-  if [ ! -d "$INSTALL_ROOT" ]; then
+  # Catch errors
+  trap 'exit 1' ERR
+  # Check that quorum is installed
+  if [ ! -d "${INSTALL_ROOT}" ]; then
     echo 'Quorum is not installed. Please run install_quorum.sh first.'
+    trap - ERR
     exit 1
   fi
-  # export bin directories
-  export PATH="$PATH:$HOME/$INSTALL_ROOT/build/bin"
-  export PATH="$PATH:$HOME/$INSTALL_ROOT/istanbul-tools/build/bin"
-  # check that the geth and istanbul commands are available
+  # Export bin directories
+  export PATH="${PATH}:${HOME}/${INSTALL_ROOT}/build/bin"
+  export PATH="${PATH}:${HOME}/${INSTALL_ROOT}/istanbul-tools/build/bin"
+  # Check that the geth and istanbul commands are available
   if ! command -v geth &> /dev/null
   then
-    utils::err "Geth command not found in $INSTALL_ROOT/build/bin"
+    utils::err "Geth command not found in ${INSTALL_ROOT}/build/bin"
+    trap - ERR
     exit 1
   fi
   if ! command -v istanbul &> /dev/null
   then
-    utils::err "Istanbul command not found in $INSTALL_ROOT/istanbul-tools/build/bin"
+    utils::err \
+      "Istanbul command not found in ${INSTALL_ROOT}/istanbul-tools/build/bin"$
+    trap - ERR
     exit 1
   fi
+  # Remove trap
+  trap - ERR
 }
 
-# prepare all hosts by creating the deploy directory
+# Prepare the host for the configuration generation
+# Globals:
+#   None
+# Arguments:
+#   None
+# Outputs:
+#   None
+# Returns:
+#   None
 prepare() {
-  # check that no more arguments are provided
-  if [ $# -ne 0 ]; then
-    echo "Usage: $0 prepare"
-    exit 1
-  fi
-  # check that the installation has been completed
   setup_environment
-  # create deploy directory
-  if [ -d "$DEPLOY_ROOT" ]; then
-    rm -rf $DEPLOY_ROOT
+  # Create deploy directory
+  if [ -d "${DEPLOY_ROOT}" ]; then
+    rm -rf ${DEPLOY_ROOT}
   fi
-  mkdir -p $DEPLOY_ROOT
+  mkdir -p ${DEPLOY_ROOT}
 }
 
-# prepare the network root directory and create a directory for each node
+# Prepare the network root directory and create a directory for each node
+# Globals:
+#   None
+# Arguments:
+#   $1: number of nodes
+# Outputs:
+#   None
+# Returns:
+#   None
 prepare_network_root() {
-  # retrieve arguments
+  # Retrieve arguments
   local number_of_nodes="${1}"
-  # remove network root if it exists and create it
-  if [ -d "$NETWORK_ROOT" ]; then
-    rm -rf $NETWORK_ROOT
+  # Create network root directory
+  if [ -d "${NETWORK_ROOT}" ]; then
+    rm -rf ${NETWORK_ROOT}
   fi
-  mkdir $NETWORK_ROOT
-  # create a directory for each node
+  mkdir ${NETWORK_ROOT}
+  # Create a directory for each node
   for i in $(seq 0 $((number_of_nodes - 1))); do
-    mkdir $NETWORK_ROOT/n$i
-    mkdir $NETWORK_ROOT/n${i}_twin
+    mkdir ${NETWORK_ROOT}/n${i}
+    mkdir ${NETWORK_ROOT}/n${i}_twin
   done
 }
 
-# set the ip and port of each node in the static-nodes.json file
+# Set the ip and port of each node in the static-nodes.json file
+# Globals:
+#   None
+# Arguments:
+#   $1: static-nodes.json file
+#   $2: nodefile
+# Outputs:
+#   None
+# Returns:
+#   None
 set_nodes_ip_port() {
-  # retrieve arguments
+  # Retrieve arguments
   local static_nodes_file="${1}"
   local nodefile="${2}"
-  # create a twin file
-  local static_nodes_file_twin="$static_nodes_file.twin"
-  # create a temporary file
+  # Create a twin file
+  local static_nodes_file_twin="${static_nodes_file}.twin"
+  # Read the static-nodes.json file
   local index=1
-  # read the static-nodes.json file
   while IFS= read -r line; do
-    # check if the line contains the string "enode"
-    if [[ ! $line == *"enode"* ]]; then
-      echo "$line" >> "$static_nodes_file.tmp"
-      echo "$line" >> "$static_nodes_file_twin"
+    # Check if the line contains the string "enode"
+    if [[ ! ${line} == *"enode"* ]]; then
+      echo "${line}" >> "${static_nodes_file}.tmp"
+      echo "${line}" >> "${static_nodes_file}_twin"
       continue
     fi
-    # retrieve node ip and port from the nodefile
-    local node=$(sed -n "${index}p" $nodefile)
-    local node_ip=$(echo $node | cut -d: -f1)
-    local node_port=$(echo $node | cut -d: -f2)
-    local node_port_twin=$(echo $node | cut -d: -f4)
-    # replace the ip and port in the enode uri
-    local new_line=$(echo $line | sed "s/@.*?/@$node_ip:$node_port?/")
-    echo "$new_line" >> "$static_nodes_file.tmp"
-    local new_line_twin=$(echo $line | sed "s/@.*?/@$node_ip:$node_port_twin?/")
-    echo "$new_line_twin" >> "$static_nodes_file_twin"
-    # increment the index
+    # Retrieve node ip and port from the nodefile
+    local node=$(sed -n "${index}p" ${nodefile})
+    local node_ip=$(echo ${node} | cut -d: -f1)
+    local node_port=$(echo ${node} | cut -d: -f2)
+    local node_port_twin=$(echo ${node} | cut -d: -f4)
+    # Replace the ip and port in the enode uri
+    local new_line=$(echo ${line} | sed "s/@.*?/@${node_ip}:${node_port}?/")
+    echo ${new_line} >> "${static_nodes_file}.tmp"
+    local new_line_twin=$(echo ${line} | sed "s/@.*?/@${node_ip}:${node_port_twin}?/")
+    echo ${new_line_twin} >> ${static_nodes_file_twin}
+    # Increment the index
     index=$((index + 1))
-  done < $static_nodes_file
-  echo ']' >> "$static_nodes_file.tmp"
-  echo ']' >> "$static_nodes_file_twin"
-  # replace the static-nodes.json file
-  mv "$static_nodes_file.tmp" $static_nodes_file
+  done < ${static_nodes_file}
+  echo ']' >> "${static_nodes_file}.tmp"
+  echo ']' >> ${static_nodes_file_twin}
+  # Replace the static-nodes.json file with the new one
+  mv "${static_nodes_file}.tmp" ${static_nodes_file}
 }
 
 # set the account address and balance present in the keyfile in the genesis.json file
@@ -225,6 +267,8 @@ finalize() {
   # remove the genesis.json and static-nodes.json files
   rm $genesis $static_nodes $static_nodes.twin
 }
+
+utils::ask_sudo
 
 # check that at least one argument has been provided
 if [ $# -eq 0 ]; then

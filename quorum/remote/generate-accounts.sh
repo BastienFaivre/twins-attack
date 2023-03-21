@@ -1,59 +1,117 @@
 #!/bin/bash
-# Generates accounts with initial balance
+#===============================================================================
+# Modified by: Bastien Faivre
+# Project: EPFL Master Semester Project
+# Date: March 2023
+# Description: Generates Ethereum accounts
 # Source: https://github.com/Blockchain-Benchmarking/minion/blob/cleanup/script/remote/linux/apt/install-geth-accounts-worker
+#===============================================================================
 
-# read environment file
+#===============================================================================
+# IMPORTS
+#===============================================================================
+
 . remote/remote.env
-
-# import utility functions
 . remote/utils/utils.sh
 
-utils::ask_sudo
+#===============================================================================
+# FUNCTIONS
+#===============================================================================
 
-# check that the installation has been completed
+# Check that the necessary commands are available and export them
+# Globals:
+#   None
+# Arguments:
+#   None
+# Outputs:
+#   None
+# Returns:
+#   None
 setup_environment() {
-  # check that quorum is installed
-  if [ ! -d "$INSTALL_ROOT" ]; then
+  # Catch errors
+  trap 'exit 1' ERR
+  # Check that quorum is installed
+  if [ ! -d "${INSTALL_ROOT}" ]; then
     echo 'Quorum is not installed. Please run install_quorum.sh first.'
+    trap - ERR
     exit 1
   fi
-  # export bin directories
-  export PATH="$PATH:$HOME/$INSTALL_ROOT/build/bin"
-  export PATH="$PATH:$HOME/$INSTALL_ROOT/istanbul-tools/build/bin"
-  # check that the geth and istanbul commands are available
+  # Export bin directories
+  export PATH="${PATH}:${HOME}/${INSTALL_ROOT}/build/bin"
+  export PATH="${PATH}:${HOME}/${INSTALL_ROOT}/istanbul-tools/build/bin"
+  # Check that the geth and istanbul commands are available
   if ! command -v geth &> /dev/null
   then
-    utils::err "Geth command not found in $INSTALL_ROOT/build/bin"
+    utils::err "Geth command not found in ${INSTALL_ROOT}/build/bin"
+    trap - ERR
     exit 1
   fi
   if ! command -v istanbul &> /dev/null
   then
-    utils::err "Istanbul command not found in $INSTALL_ROOT/istanbul-tools/build/bin"
+    utils::err \
+      "Istanbul command not found in ${INSTALL_ROOT}/istanbul-tools/build/bin"$
+    trap - ERR
     exit 1
   fi
+  # Remove trap
+  trap - ERR
 }
 
-# install necessary packages
+# Install the necessary packages
+# Globals:
+#   None
+# Arguments:
+#   None
+# Outputs:
+#   None
+# Returns:
+#   None
 install_necessary_packages() {
+  # Catch errors
+  # trap 'exit 1' ERR
+  # Install packages
   sudo apt-get update
   sudo apt-get install -y software-properties-common
   sudo add-apt-repository -y ppa:ethereum/ethereum
   sudo apt-get update
   sudo apt-get install -y python3 python3-pip
   sudo pip3 install web3
+  # Remove trap
+  # trap - ERR
 }
 
-# create install directory and empty accounts directory
+# Initialize the necessary directories
+# Globals:
+#   None
+# Arguments:
+#   None
+# Outputs:
+#   None
+# Returns:
+#   None
 initialize_directories() {
-  mkdir -p $INSTALL_FOLDER
-  if [ -d "$ACCOUNTS_ROOT" ]; then
-    rm -rf $ACCOUNTS_ROOT/*
+  # Catch errors
+  trap 'exit 1' ERR
+  # Initialize directories
+  mkdir -p ${INSTALL_FOLDER}
+  if [ -d "${ACCOUNTS_ROOT}" ]; then
+    rm -rf ${ACCOUNTS_ROOT}/*
   else
-    mkdir -p $ACCOUNTS_ROOT
+    mkdir -p ${ACCOUNTS_ROOT}
   fi
+  # Remove trap
+  trap - ERR
 }
 
 # generate accounts
+# Globals:
+#   None
+# Arguments:
+#   $1: number of accounts to generate
+# Outputs:
+#   None
+# Returns:
+#   None
 generate_accounts() {
   # retrieve arguments
   local number_of_accounts="${1}"
@@ -90,19 +148,20 @@ generate_accounts() {
   done
 }
 
-setup_environment
+#===============================================================================
+# MAIN
+#===============================================================================
 
-# read argument
+# Read arguments
 if [ $# -ne 1 ]; then
-  echo "Usage: $0 <number of accounts>"
+  echo "Usage: ${0} <number of accounts>"
   exit 1
 fi
-number_of_accounts=$1
+number_of_accounts=${1}
 
-# install necessary packages
+utils::ask_sudo
+utils::exec_cmd 'setup_environment' 'Setup environment'
 utils::exec_cmd 'install_necessary_packages' 'Install necessary packages'
-# initialize directories
 utils::exec_cmd 'initialize_directories' 'Initialize directories'
-# generate accounts
-cmd="generate_accounts $number_of_accounts"
-utils::exec_cmd "$cmd" 'Generate accounts'
+cmd="generate_accounts ${number_of_accounts}"
+utils::exec_cmd "${cmd}" 'Generate accounts'

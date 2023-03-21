@@ -1,15 +1,43 @@
 #!/bin/bash
-# export the client, controller, and proxy to the remote host
+#===============================================================================
+# Author: Bastien Faivre
+# Project: EPFL Master Semester Project
+# Date: March 2023
+# Description: Export the client, controller, and proxy to the remote host
+#              $HOST:$PORT (see quorum/local/local.env)
+#===============================================================================
 
-# read environment file
+#===============================================================================
+# IMPORTS
+#===============================================================================
+
 . quorum/local/local.env
-
-# import utility functions
 . quorum/local/utils/utils.sh
 
-# export the client, controller, and proxy to the remote host
-export_scripts() {
-  rsync -rav -e "ssh -p $PORT" --exclude '.*' --exclude 'node/' --exclude 'quorum/' --exclude 'README.md' . $HOST:~/go/src/semester-project &
-  wait
+#===============================================================================
+# FUNCTIONS
+#===============================================================================
+
+# Export the client, controller, and proxy to the remote host $HOST:$PORT
+# Globals:
+#   None
+# Arguments:
+#   None
+# Outputs:
+#   None
+# Returns:
+#   None
+export() {
+  rsync -rav -e "ssh -p $PORT" \
+    --exclude '.*' \
+    --exclude 'node/' \
+    --exclude 'quorum/' \
+    --exclude 'README.md' \
+    . $HOST:~/go/src/semester-project
 }
-utils::exec_cmd 'export_scripts' 'Export scripts to remote host'
+
+#===============================================================================
+# MAIN
+#===============================================================================
+
+utils::exec_cmd 'export' "Export files to $HOST:$PORT"
