@@ -31,14 +31,14 @@ setup_environment() {
   # Catch errors
   trap 'exit 1' ERR
   # Check that quorum is installed
-  if [ ! -d "${INSTALL_ROOT}" ]; then
+  if [ ! -d ${INSTALL_ROOT} ]; then
     echo 'Quorum is not installed. Please run install_quorum.sh first.'
     trap - ERR
     exit 1
   fi
   # Export bin directories
-  export PATH="${PATH}:${HOME}/${INSTALL_ROOT}/build/bin"
-  export PATH="${PATH}:${HOME}/${INSTALL_ROOT}/istanbul-tools/build/bin"
+  export PATH=${PATH}:${HOME}/${INSTALL_ROOT}/build/bin
+  export PATH=${PATH}:${HOME}/${INSTALL_ROOT}/istanbul-tools/build/bin
   # Check that the geth and istanbul commands are available
   if ! command -v geth &> /dev/null
   then
@@ -67,12 +67,15 @@ setup_environment() {
 # Returns:
 #   None
 prepare() {
+  # Catch errors
+  trap 'exit 1' ERR
+  # Setup environment
   setup_environment
   # Create deploy directory
-  if [ -d "${DEPLOY_ROOT}" ]; then
-    rm -rf ${DEPLOY_ROOT}
-  fi
+  rm -rf ${DEPLOY_ROOT}
   mkdir -p ${DEPLOY_ROOT}
+  # Remove trap
+  trap - ERR
 }
 
 # Prepare the network root directory and create a directory for each node
@@ -85,18 +88,25 @@ prepare() {
 # Returns:
 #   None
 prepare_network_root() {
+  # Catch errors
+  trap 'exit 1' ERR
   # Retrieve arguments
-  local number_of_nodes="${1}"
-  # Create network root directory
-  if [ -d "${NETWORK_ROOT}" ]; then
-    rm -rf ${NETWORK_ROOT}
+  local number_of_nodes=${1}
+  if [ -z ${number_of_nodes} ]; then
+    echo 'Missing number of nodes.'
+    trap - ERR
+    exit 1
   fi
-  mkdir ${NETWORK_ROOT}
+  # Create network root directory
+  rm -rf ${NETWORK_ROOT}
+  mkdir -p ${NETWORK_ROOT}
   # Create a directory for each node
   for i in $(seq 0 $((number_of_nodes - 1))); do
     mkdir ${NETWORK_ROOT}/n${i}
     mkdir ${NETWORK_ROOT}/n${i}_twin
   done
+  # Remove trap
+  trap - ERR
 }
 
 # Set the ip and port of each node in the static-nodes.json file
@@ -110,18 +120,28 @@ prepare_network_root() {
 # Returns:
 #   None
 set_nodes_ip_port() {
+  # Catch errors
+  trap 'exit 1' ERR
   # Retrieve arguments
-  local static_nodes_file="${1}"
-  local nodefile="${2}"
-  # Create a twin file
-  local static_nodes_file_twin="${static_nodes_file}.twin"
+  local static_nodes_file=${1}
+  local nodefile=${2}
+  if [ -z ${static_nodes_file} ]; then
+    echo 'Missing static-nodes.json file.'
+    trap - ERR
+    exit 1
+  fi
+  if [ -z ${nodefile} ]; then
+    echo 'Missing nodefile.'
+    trap - ERR
+    exit 1
+  fi
   # Read the static-nodes.json file
   local index=1
   while IFS= read -r line; do
-    # Check if the line contains the string "enode"
+    # Check if the line does not contain the string "enode"
     if [[ ! ${line} == *"enode"* ]]; then
-      echo "${line}" >> "${static_nodes_file}.tmp"
-      echo "${line}" >> "${static_nodes_file}_twin"
+      echo ${line} >> ${static_nodes_file}.tmp
+      echo ${line} >> ${static_nodes_file}.twin
       continue
     fi
     # Retrieve node ip and port from the nodefile
@@ -131,169 +151,240 @@ set_nodes_ip_port() {
     local node_port_twin=$(echo ${node} | cut -d: -f4)
     # Replace the ip and port in the enode uri
     local new_line=$(echo ${line} | sed "s/@.*?/@${node_ip}:${node_port}?/")
-    echo ${new_line} >> "${static_nodes_file}.tmp"
+    echo ${new_line} >> ${static_nodes_file}.tmp
     local new_line_twin=$(echo ${line} | sed "s/@.*?/@${node_ip}:${node_port_twin}?/")
-    echo ${new_line_twin} >> ${static_nodes_file_twin}
+    echo ${new_line_twin} >> ${static_nodes_file}.twin
     # Increment the index
     index=$((index + 1))
   done < ${static_nodes_file}
-  echo ']' >> "${static_nodes_file}.tmp"
-  echo ']' >> ${static_nodes_file_twin}
+  echo ']' >> ${static_nodes_file}.tmp
+  echo ']' >> ${static_nodes_file}.twin
   # Replace the static-nodes.json file with the new one
-  mv "${static_nodes_file}.tmp" ${static_nodes_file}
+  mv ${static_nodes_file}.tmp ${static_nodes_file}
+  # Remove trap
+  trap - ERR
 }
 
-# set the account address and balance present in the keyfile in the genesis.json file
+# Initialize the accounts in the genesis file
+# Globals:
+#   None
+# Arguments:
+#   $1: genesis file
+#   $2: keyfile
+# Outputs:
+#   None
+# Returns:
+#   None
 initialize_accounts() {
-  # retrieve arguments
-  local genesis="${1}"
-  local keyfile="${2}"
-  # read the genesis file
+  # Catch errors
+  trap 'exit 1' ERR
+  # Retrieve arguments
+  local genesis=${1}
+  local keyfile=${2}
+  if [ -z ${genesis} ]; then
+    echo 'Missing genesis file.'
+    trap - ERR
+    exit 1
+  fi
+  if [ -z ${keyfile} ]; then
+    echo 'Missing keyfile.'
+    trap - ERR
+    exit 1
+  fi
+  # Read the genesis file
   while IFS= read -r line; do
-    echo "$line"
-    # check if the line contains the string "alloc"
-    if [[ $line == *"alloc"* ]]; then
+    echo ${line}
+    # Check if the line contains the string "alloc"
+    if [[ ${line} == *"alloc"* ]]; then
       while IFS= read -r account; do
-        address=$(echo $account | cut -d: -f1)
-        printf "        \"%s\": {\n" "${address}"
-		    printf "            \"balance\": \"%s\"\n" "${BALANCE}"
+        address=$(echo ${account} | cut -d: -f1)
+        printf "        \"%s\": {\n" ${address}
+		    printf "            \"balance\": \"%s\"\n" ${BALANCE}
 		    printf "        },\n"
-      done < $keyfile
+      done < ${keyfile}
     fi
-  done < $genesis > "$genesis.tmp"
-  echo '}' >> "$genesis.tmp"
-  # replace the genesis file
-  mv "$genesis.tmp" $genesis
+  done < ${genesis} > ${genesis}.tmp
+  echo '}' >> ${genesis}.tmp
+  # Replace the genesis file
+  mv ${genesis}.tmp ${genesis}
+  # Remove trap
+  trap - ERR
 }
 
-# fill the nodes directory with the nodekey, port and rpc port files
+# Initialize the nodes with their nodekey, port, and rpc port
+# Globals:
+#   None
+# Arguments:
+#   $1: nodefile
+#   $2: number of nodes
+# Outputs:
+#   None
+# Returns:
+#   None
 initialize_nodes() {
-  # retrieve arguments
-  local nodefile="${1}"
-  local number_of_nodes="${2}"
-  # initialize nodes
+  # Catch errors
+  trap 'exit 1' ERR
+  # Retrieve arguments
+  local nodefile=${1}
+  local number_of_nodes=${2}
+  if [ -z ${nodefile} ]; then
+    echo 'Missing nodefile.'
+    trap - ERR
+    exit 1
+  fi
+  if [ -z ${number_of_nodes} ]; then
+    echo 'Missing number of nodes.'
+    trap - ERR
+    exit 1
+  fi
+  # Initialize nodes
   for i in $(seq 0 $((number_of_nodes - 1))); do
-    # retrieve node port and rpc port from the nodefile
-    local node=$(sed -n "$((i+1))p" $nodefile)
-    local node_port=$(echo $node | cut -d: -f2)
-    local rpc_port=$(echo $node | cut -d: -f3)
-    local node_port_twin=$(echo $node | cut -d: -f4)
-    local rpc_port_twin=$(echo $node | cut -d: -f5)
-    # copy the nodekey to the node directory and remove the old directory
-    cp $NETWORK_ROOT/$i/nodekey $NETWORK_ROOT/n$i/nodekey
-    cp $NETWORK_ROOT/$i/nodekey $NETWORK_ROOT/n${i}_twin/nodekey
-    chmod 644 $NETWORK_ROOT/n$i/nodekey
-    chmod 644 $NETWORK_ROOT/n${i}_twin/nodekey
-    rm -rf $NETWORK_ROOT/$i
-    # add port and rpc port files to the node directory
-    echo $node_port > $NETWORK_ROOT/n$i/port
-    echo $rpc_port > $NETWORK_ROOT/n$i/rpcport
-    echo $node_port_twin > $NETWORK_ROOT/n${i}_twin/port
-    echo $rpc_port_twin > $NETWORK_ROOT/n${i}_twin/rpcport
+    # Retrieve node port and rpc port from the nodefile
+    local node=$(sed -n "$((i+1))p" ${nodefile})
+    local node_port=$(echo ${node} | cut -d: -f2)
+    local rpc_port=$(echo ${node} | cut -d: -f3)
+    local node_port_twin=$(echo ${node} | cut -d: -f4)
+    local rpc_port_twin=$(echo ${node} | cut -d: -f5)
+    # Copy the nodekey to the node directory and remove the old directory
+    cp ${NETWORK_ROOT}/${i}/nodekey ${NETWORK_ROOT}/n${i}/nodekey
+    cp ${NETWORK_ROOT}/${i}/nodekey ${NETWORK_ROOT}/n${i}_twin/nodekey
+    chmod 644 ${NETWORK_ROOT}/n${i}/nodekey
+    chmod 644 ${NETWORK_ROOT}/n${i}_twin/nodekey
+    rm -rf ${NETWORK_ROOT}/${i}
+    # Add port and rpc port files to the node directory
+    echo ${node_port} > ${NETWORK_ROOT}/n${i}/port
+    echo ${rpc_port} > ${NETWORK_ROOT}/n${i}/rpcport
+    echo ${node_port_twin} > ${NETWORK_ROOT}/n${i}_twin/port
+    echo ${rpc_port_twin} > ${NETWORK_ROOT}/n${i}_twin/rpcport
   done
+  # Remove trap
+  trap - ERR
 }
 
-# generate the configuration file for quorum
+# Generate the configuration files
+# Globals:
+#   None
+# Arguments:
+#   $1: nodefile
+#   $2: keyfile
+# Outputs:
+#   None
+# Returns:
+#   None
 generate() {
+  # Catch errors
+  trap 'exit 1' ERR
+  # Retrieve arguments
   if [ $# -ne 2 ]; then
     echo "Usage: $0 generate <nodefile> <keyfile>"
+    trap - ERR
     exit 1
   fi
-  # check that the installation has been completed
+  local nodefile=${1}
+  local keyfile=${2}
+  if [ ! -f ${nodefile} ]; then
+    echo "Nodefile ${nodefile} does not exist."
+    trap - ERR
+    exit 1
+  fi
+  if [ ! -f ${keyfile} ]; then
+    echo "Keyfile ${keyfile} does not exist."
+    trap - ERR
+    exit 1
+  fi
+  # Setup environment
   setup_environment
-  # retrieve arguments
-  local nodefile="${1}"
-  local keyfile="${2}"
-  # check that the nodefile and keyfile exist
-  if [ ! -f "$nodefile" ]; then
-    utils::err "Nodefile $nodefile does not exist"
-    exit 1
-  fi
-  if [ ! -f "$keyfile" ]; then
-    utils::err "Keyfile $keyfile does not exist"
-    exit 1
-  fi
-  # count the number of nodes
-  local number_of_nodes=$(wc -l < $nodefile)
+  # Count the number of nodes
+  local number_of_nodes=$(wc -l < ${nodefile})
   # prepare network root
-  prepare_network_root $number_of_nodes
+  prepare_network_root ${number_of_nodes}
   # run istanbul setup
   (
-    cd $NETWORK_ROOT
-    istanbul setup --num $number_of_nodes --nodes --quorum --save --verbose > /tmp/istanbul.log 2>&1
-    if [ $? -ne 0 ]; then
-      utils::err "Istanbul setup failed: $(cat /tmp/istanbul.log)"
-      exit 1
-    fi
-    rm /tmp/istanbul.log
+    cd ${NETWORK_ROOT}
+    istanbul setup --num ${number_of_nodes} --nodes --quorum --save --verbose
   )
-  # set nodes ip and port
-  set_nodes_ip_port "$NETWORK_ROOT/static-nodes.json" $nodefile
-  # initialize accounts
-  initialize_accounts "$NETWORK_ROOT/genesis.json" $keyfile
-  # initialize nodes
-  initialize_nodes $nodefile $number_of_nodes
-  # zip the network root
-  tar -C $DEPLOY_ROOT -czf $NETWORK_ROOT.tar.gz 'network'
-  # remove the network root
-  rm -rf $NETWORK_ROOT
+  set_nodes_ip_port ${NETWORK_ROOT}/static-nodes.json ${nodefile}
+  initialize_accounts ${NETWORK_ROOT}/genesis.json ${keyfile}
+  initialize_nodes ${nodefile} ${number_of_nodes}
+  tar -C ${DEPLOY_ROOT} -czf ${NETWORK_ROOT}.tar.gz 'network'
+  rm -rf ${NETWORK_ROOT}
+  # Remove trap
+  trap - ERR
 }
 
-# finalize the network by initializing each node
+# Finalize the configuration
+# Globals:
+#   None
+# Arguments:
+#   None
+# Outputs:
+#   None
+# Returns:
+#   None
 finalize() {
-  local genesis=$DEPLOY_ROOT/genesis.json
-  local static_nodes=$DEPLOY_ROOT/static-nodes.json
-  # check that the installation has been completed
+  # Catch errors
+  trap 'exit 1' ERR
+  # Setup environment
   setup_environment
-  # remove network root if it exists
-  if [ -d "$NETWORK_ROOT" ]; then
-    rm -rf $NETWORK_ROOT
-  fi
-  # iterate over all nodes directories
-  for dir in $DEPLOY_ROOT/n*; do
-    # check that dir is a directory
-    if [ ! -d "$dir" ]; then
+  local genesis=${DEPLOY_ROOT}/genesis.json
+  local static_nodes=${DEPLOY_ROOT}/static-nodes.json
+  # Remove network root
+  rm -rf ${NETWORK_ROOT}
+  # Iterate over all nodes directories
+  for dir in ${DEPLOY_ROOT}/n*; do
+    # Check that dir is a directory
+    if [ ! -d ${dir} ]; then
       continue
     fi
-    # copy the right static-nodes.json file to the node directory
-    if [[ $dir == *"twin"* ]]; then
-      cp $static_nodes.twin $dir/static-nodes.json
+    # Copy the right static-nodes.json file to the node directory
+    if [[ ${dir} == *"twin"* ]]; then
+      cp ${static_nodes}.twin ${dir}/static-nodes.json
     else
-      cp $static_nodes $dir/static-nodes.json
+      cp ${static_nodes} ${dir}/static-nodes.json
     fi
-    # initialize the node
-    geth --datadir $dir init $genesis > /dev/null 2>&1
+    # Initialize the node
+    geth --datadir ${dir} init ${genesis} > /dev/null 2>&1
   done
-  # remove the genesis.json and static-nodes.json files
-  rm $genesis $static_nodes $static_nodes.twin
+  # Remove the genesis.json and static-nodes.json files
+  rm ${genesis} ${static_nodes}*
+  # Remove trap
+  trap - ERR
 }
 
-utils::ask_sudo
+#===============================================================================
+# Main
+#===============================================================================
 
-# check that at least one argument has been provided
+# Read arguments
 if [ $# -eq 0 ]; then
   echo "Usage: $0 <action> [options...]"
   exit 1
 fi
-
-# read action
 action=$1; shift
 
-case $action in
+# Catch errors
+trap 'exit 1' ERR
+
+utils::ask_sudo
+case ${action} in
   'prepare')
     cmd="prepare $@"
-    utils::exec_cmd "$cmd" 'Prepare all hosts'
+    utils::exec_cmd "${cmd}" 'Prepare all hosts'
     ;;
   'generate')
     cmd="generate $@"
-    utils::exec_cmd "$cmd" 'Generate configuration files'
+    utils::exec_cmd "${cmd}" 'Generate configuration files'
     ;;
   'finalize')
     cmd="finalize $@"
-    utils::exec_cmd "$cmd" 'Finalize configuration'
+    utils::exec_cmd "${cmd}" 'Finalize configuration'
     ;;
   *)
     echo "Usage: $0 <action> [options...]"
+    trap - ERR
     exit 1
     ;;
 esac
+
+# Remove trap
+trap - ERR

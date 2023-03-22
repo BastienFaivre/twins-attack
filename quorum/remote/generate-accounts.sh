@@ -31,14 +31,14 @@ setup_environment() {
   # Catch errors
   trap 'exit 1' ERR
   # Check that quorum is installed
-  if [ ! -d "${INSTALL_ROOT}" ]; then
+  if [ ! -d ${INSTALL_ROOT} ]; then
     echo 'Quorum is not installed. Please run install_quorum.sh first.'
     trap - ERR
     exit 1
   fi
   # Export bin directories
-  export PATH="${PATH}:${HOME}/${INSTALL_ROOT}/build/bin"
-  export PATH="${PATH}:${HOME}/${INSTALL_ROOT}/istanbul-tools/build/bin"
+  export PATH=${PATH}:${HOME}/${INSTALL_ROOT}/build/bin
+  export PATH=${PATH}:${HOME}/${INSTALL_ROOT}/istanbul-tools/build/bin
   # Check that the geth and istanbul commands are available
   if ! command -v geth &> /dev/null
   then
@@ -68,7 +68,7 @@ setup_environment() {
 #   None
 install_necessary_packages() {
   # Catch errors
-  # trap 'exit 1' ERR
+  trap 'exit 1' ERR
   # Install packages
   sudo apt-get update
   sudo apt-get install -y software-properties-common
@@ -77,7 +77,7 @@ install_necessary_packages() {
   sudo apt-get install -y python3 python3-pip
   sudo pip3 install web3
   # Remove trap
-  # trap - ERR
+  trap - ERR
 }
 
 # Initialize the necessary directories
@@ -94,11 +94,8 @@ initialize_directories() {
   trap 'exit 1' ERR
   # Initialize directories
   mkdir -p ${INSTALL_FOLDER}
-  if [ -d "${ACCOUNTS_ROOT}" ]; then
-    rm -rf ${ACCOUNTS_ROOT}/*
-  else
-    mkdir -p ${ACCOUNTS_ROOT}
-  fi
+  rm -rf ${ACCOUNTS_ROOT}/*
+  mkdir -p ${ACCOUNTS_ROOT}
   # Remove trap
   trap - ERR
 }
@@ -113,39 +110,48 @@ initialize_directories() {
 # Returns:
 #   None
 generate_accounts() {
-  # retrieve arguments
-  local number_of_accounts="${1}"
-  # get batch size
+  # Catch errors
+  trap 'exit 1' ERR
+  # Retrieve arguments
+  local number_of_accounts=${1}
+  if [ -z ${number_of_accounts} ]; then
+    utils::err 'Missing number of accounts to generate'
+    trap - ERR
+    exit 1
+  fi
+  # Get batch size
   local batch=$(cat '/proc/cpuinfo' | grep processor | wc -l)
-  # generate accounts
+  # Generate accounts
   total=0
-  while [ $total -lt $number_of_accounts ]; do
+  while [ ${total} -lt ${number_of_accounts} ]; do
     len=$((number_of_accounts - total))
-    if [ $len -gt $batch ]; then
-      len=$batch
+    if [ ${len} -gt ${batch} ]; then
+      len=${batch}
     fi
     upto=$((total + len - 1))
-    for i in $(seq $total $upto); do
+    for i in $(seq ${total} ${upto}); do
       (
-        mkdir -p $ACCOUNTS_ROOT/$i
-        printf "%d\n%d\n" $i $i | geth --datadir $ACCOUNTS_ROOT/$i account new > /dev/null 2>&1
-        local keypath=$(ls -1 $ACCOUNTS_ROOT/$i/keystore | head -n 1)
-        keypath=$ACCOUNTS_ROOT/$i/keystore/$keypath
+        mkdir -p ${ACCOUNTS_ROOT}/${i}
+        printf "%d\n%d\n" ${i} ${i} | geth --datadir ${ACCOUNTS_ROOT}/${i} account new > /dev/null 2>&1
+        local keypath=$(ls -1 ${ACCOUNTS_ROOT}/${i}/keystore | head -n 1)
+        keypath=${ACCOUNTS_ROOT}/${i}/keystore/${keypath}
         local address=${keypath##*--}
-        echo $address > $ACCOUNTS_ROOT/$i/address
-        ./remote/extract.py $keypath $i > $ACCOUNTS_ROOT/$i/private
-        rm -rf $ACCOUNTS_ROOT/$i/keystore
+        echo ${address} > ${ACCOUNTS_ROOT}/${i}/address
+        ./remote/extract.py ${keypath} ${i} > ${ACCOUNTS_ROOT}/${i}/private
+        rm -rf ${ACCOUNTS_ROOT}/${i}/keystore
       ) &
     done
     wait
     total=$((total + len))
   done
-  # gather addresses and private keys in a single file
+  # Gather addresses and private keys in a single file
   for i in $(seq 0 $((number_of_accounts - 1))); do
-    local address=$(cat $ACCOUNTS_ROOT/$i/address)
-    local private=$(cat $ACCOUNTS_ROOT/$i/private)
-    echo "$address:$private" >> $ACCOUNTS_ROOT/accounts.txt
+    local address=$(cat ${ACCOUNTS_ROOT}/${i}/address)
+    local private=$(cat ${ACCOUNTS_ROOT}/${i}/private)
+    echo ${address}:${private} >> ${ACCOUNTS_ROOT}/accounts.txt
   done
+  # Remove trap
+  trap - ERR
 }
 
 #===============================================================================
@@ -159,9 +165,15 @@ if [ $# -ne 1 ]; then
 fi
 number_of_accounts=${1}
 
+# Catch errors
+trap 'exit 1' ERR
+
 utils::ask_sudo
-utils::exec_cmd 'setup_environment' 'Setup environment'
+setup_environment
 utils::exec_cmd 'install_necessary_packages' 'Install necessary packages'
 utils::exec_cmd 'initialize_directories' 'Initialize directories'
 cmd="generate_accounts ${number_of_accounts}"
 utils::exec_cmd "${cmd}" 'Generate accounts'
+
+# Remove trap
+trap - ERR
