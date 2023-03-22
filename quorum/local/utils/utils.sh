@@ -1,7 +1,11 @@
 #!/bin/bash
-#
-# Define a set of utility functions
+#===============================================================================
+# Author: Bastien Faivre
+# Project: EPFL Master Semester Project
+# Date: March 2023
+# Description: Define a set of utility functions
 # Source: https://github.com/BastienFaivre/bash-scripts/blob/main/utils/utils.sh
+#===============================================================================
 
 #######################################
 # Show an error

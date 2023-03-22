@@ -1,12 +1,27 @@
 #!/bin/bash
-# this script is used to install quorum on the remote hosts
+#===============================================================================
+# Author: Bastien Faivre
+# Project: EPFL Master Semester Project
+# Date: March 2023
+# Description: Install Quorum on the remote hosts
+#===============================================================================
 
-# read environment file
+#===============================================================================
+# IMPORTS
+#===============================================================================
+
 . local.env
-
-# import utility functions
 . utils/utils.sh
 
-# install quorum on the remote hosts
-hosts_array=($(utils::create_remote_hosts_list $HOST $PORT $NUMBER_OF_HOSTS))
-utils::exec_cmd_on_remote_hosts './remote/install-quorum.sh' 'Installing quorum on remote hosts' "${hosts_array[@]}"
+#===============================================================================
+# MAIN
+#===============================================================================
+
+# Catch errors
+trap 'exit 1' ERR
+
+hosts_array=($(utils::create_remote_hosts_list ${HOST} ${PORT} ${NUMBER_OF_HOSTS}))
+utils::exec_cmd_on_remote_hosts './remote/install-quorum.sh' 'Install quorum on remote hosts' "${hosts_array[@]}"
+
+# Remove trap
+trap - ERR

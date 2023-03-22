@@ -1,21 +1,55 @@
 #!/bin/bash
-# export all scripts in this directory to the remote hosts
+#===============================================================================
+# Author: Bastien Faivre
+# Project: EPFL Master Semester Project
+# Date: March 2023
+# Description: Export the remote directory to the remote hosts
+#===============================================================================
 
-# read environment file
+#===============================================================================
+# IMPORTS
+#===============================================================================
+
 . local.env
-
-# import utility functions
 . utils/utils.sh
 
-# export all scripts except this one to the remote hosts
-export_scripts() {
-  cd ..
-  for i in $(seq 0 $((NUMBER_OF_HOSTS - 1)))
-  do
-    rsync -rav -e "ssh -p $((PORT + i))" --exclude 'local/' . $HOST:~ &
-  done
-  wait
+#===============================================================================
+# FUNCTIONS
+#===============================================================================
+
+# Export the remote directory to the remote hosts
+# Globals:
+#   None
+# Arguments:
+#   None
+# Outputs:
+#   None
+# Returns:
+#   None
+export_remote_directory() {
+  # Catch errors
+  trap 'exit 1' ERR
+  # Export
+  (
+    cd ..
+    for i in $(seq 0 $((NUMBER_OF_HOSTS - 1)))
+    do
+      rsync -rav -e "ssh -p $((PORT + i))" --exclude 'local/' . ${HOST}:~ &
+    done
+    wait
+  )
+  # Remove trap
+  trap - ERR
 }
 
-# export all scripts
-utils::exec_cmd 'export_scripts' 'Export scripts to remote hosts'
+#===============================================================================
+# MAIN
+#===============================================================================
+
+# Catch errors
+trap 'exit 1' ERR
+
+utils::exec_cmd 'export_remote_directory' "Export the remote directory to remote hosts"
+
+# Remove trap
+trap - ERR

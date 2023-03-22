@@ -1,14 +1,28 @@
 #!/bin/bash
-# this script is used to clean the remote hosts
+#===============================================================================
+# Author: Bastien Faivre
+# Project: EPFL Master Semester Project
+# Date: March 2023
+# Description: Clean the remote hosts
+#===============================================================================
 
-# read environment file
+#===============================================================================
+# IMPORTS
+#===============================================================================
+
 . local.env
-
-# import utility functions
 . utils/utils.sh
 
-cmd='sudo rm -rf *; sudo rm -rf /usr/local/go; sed -i "/\/usr\/local\/go/d" ~/.profile'
+#===============================================================================
+# MAIN
+#===============================================================================
 
-# clean the remote hosts
-hosts_array=($(utils::create_remote_hosts_list $HOST $PORT $NUMBER_OF_HOSTS))
-utils::exec_cmd_on_remote_hosts "${cmd}" 'Cleaning remote hosts' "${hosts_array[@]}"
+# Catch errors
+trap 'exit 1' ERR
+
+hosts_array=($(utils::create_remote_hosts_list ${HOST} ${PORT} ${NUMBER_OF_HOSTS}))
+cmd='sudo rm -rf *; sudo rm -rf /usr/local/go; sed -i "/\/usr\/local\/go/d" ~/.profile'
+utils::exec_cmd_on_remote_hosts "${cmd}" 'Clean remote hosts' "${hosts_array[@]}"
+
+# Remove trap
+trap - ERR

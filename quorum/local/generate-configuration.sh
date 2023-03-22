@@ -1,82 +1,133 @@
 #!/bin/bash
-# this script is used to generate the configuration file for quorum
+#===============================================================================
+# Author: Bastien Faivre
+# Project: EPFL Master Semester Project
+# Date: March 2023
+# Description: Generate the configuration file on one remote host
+#===============================================================================
 
-# read environment file
+#===============================================================================
+# IMPORTS
+#===============================================================================
+
 . local.env
-
-# import utility functions
 . utils/utils.sh
 
-trap "echo 'Aborting...'; exit 1" ERR
+#===============================================================================
+# FUNCTIONS
+#===============================================================================
 
-# prepare all hosts
-hosts_array=($(utils::create_remote_hosts_list $HOST $PORT $NUMBER_OF_HOSTS))
-utils::exec_cmd_on_remote_hosts './remote/generate-configuration.sh prepare' 'Preparing remote hosts' "${hosts_array[@]}"
-
-# select the first host
-host=${hosts_array[0]}
-# generate the configuration file
-utils::exec_cmd_on_remote_hosts './remote/generate-configuration.sh generate remote/nodefile.txt install/geth-accounts/accounts.txt' 'Generating configuration file' $host
-
-# copy the configuration file to the local host
+# Copy the configuration file to local host
+# Globals:
+#   None
+# Arguments:
+#   $1: the remote host
+# Outputs:
+#   None
+# Returns:
+#   None
 retrieve_configuration() {
-  # retrieve argument
+  # Catch errors
+  trap 'exit 1' ERR
+  # Retrieve argument
   local host=$1
-  # split host into hostname and port
-  IFS=':' read -r -a host_array <<< "${host}"
-  # empty the tmp directory if it exists
-  if [ -d ./tmp ]; then
-    rm -rf ./tmp
+  if [ -z ${host} ]; then
+    utils::err 'Missing argument'
+    trap - ERR
+    exit 1
   fi
+  # Split host into hostname and port
+  IFS=':' read -r -a host_array <<< ${host}
+  local hostname=${host_array[0]}
+  local port=${host_array[1]}
+  # Empty the tmp directory if it exists
+  rm -rf ./tmp
   mkdir -p ./tmp
-  # copy the configuration file to the local host
-  scp -P ${host_array[1]} ${host_array[0]}:~/deploy/quorum-ibft/network.tar.gz ./tmp/network.tar.gz
+  # Copy the configuration file to the local host
+  scp -P ${port} ${hostname}:~/deploy/quorum-ibft/network.tar.gz ./tmp/network.tar.gz
   if [ $? -ne 0 ]; then
     utils::err 'Failed to retrieve configuration file'
+    trap - ERR
     exit 1
   fi
-  # copy the accounts file to the local host
-  scp -P ${host_array[1]} ${host_array[0]}:~/install/geth-accounts/accounts.txt ./tmp/accounts.txt
+  # Copy the accounts file to the local host
+  scp -P ${port} ${hostname}:~/install/geth-accounts/accounts.txt ./tmp/accounts.txt
   if [ $? -ne 0 ]; then
     utils::err 'Failed to retrieve accounts file'
+    trap - ERR
     exit 1
   fi
+  # Remove trap
+  trap - ERR
 }
-cmd="retrieve_configuration $host"
-utils::exec_cmd "$cmd" 'Retrieving configuration file'
 
-# extract the configuration file
+# Extract the configuration file
+# Globals:
+#   None
+# Arguments:
+#   None
+# Outputs:
+#   None
+# Returns:
+#   None
 extract_configuration() {
+  # Catch errors
+  trap 'exit 1' ERR
+  # Extract the configuration file
   tar -xzf ./tmp/network.tar.gz --strip-components=1 -C ./tmp
+  # Remove trap
+  trap - ERR
 }
-utils::exec_cmd 'extract_configuration' 'Extracting configuration file'
 
-# create each node configuration file
+# Create each node configuration file
+# Globals:
+#   None
+# Arguments:
+#   None
+# Outputs:
+#   None
+# Returns:
+#   None
 create_node_configuration() {
+  # Catch errors
+  trap 'exit 1' ERR
+  # Create each node configuration file
   for dir in ./tmp/n*; do
-    # check that dir is a directory and not a twin directory
-    if [ ! -d "$dir" ] || [[ "$dir" == *"twin"* ]]; then
+    # Check that dir is a directory and not a twin directory
+    if [ ! -d ${dir} ] || [[ ${dir} == *"twin"* ]]; then
       continue
     fi
+    rm -rf ./tmp/tmp
     mkdir -p ./tmp/tmp
-    # copy the genesis.json and static-nodes.json files
+    # Copy the genesis.json and static-nodes.json files
     cp ./tmp/genesis.json ./tmp/tmp
     cp ./tmp/static-nodes.json ./tmp/tmp
     cp ./tmp/static-nodes.json.twin ./tmp/tmp
-    # copy the node directory
-    cp -r "$dir" ./tmp/tmp
-    cp -r "${dir}_twin" ./tmp/tmp
-    # archive the node directory
-    tar -czf "${dir}.tar.gz" -C ./tmp/tmp .
-    # remove the tmp directory
+    # Copy the node directory
+    cp -r ${dir} ./tmp/tmp
+    cp -r ${dir}_twin ./tmp/tmp
+    # Archive the node directory
+    tar -czf ${dir}.tar.gz -C ./tmp/tmp .
+    # Remove the tmp directory
     rm -rf ./tmp/tmp
   done
+  # Remove trap
+  trap - ERR
 }
-utils::exec_cmd 'create_node_configuration' 'Creating node configuration files'
 
-# send the configuration files to the remote hosts
+# Send the configuration files to the remote hosts
+# Globals:
+#   None
+# Arguments:
+#   $@: the remote hosts array
+# Outputs:
+#   None
+# Returns:
+#   None
 send_configuration_files() {
-  # retrieve argument
+  # Catch errors
+  trap 'exit 1' ERR
+  # Retrieve argument
   local hosts_array=("$@")
   # send the configuration files to the remote hosts
   local index=0
@@ -87,22 +138,41 @@ send_configuration_files() {
     fi
     # retrieve the hostname and port
     IFS=':' read -r -a host_array <<< "${hosts_array[$index]}"
+    local hostname=${host_array[0]}
+    local port=${host_array[1]}
     # send the configuration file to the remote host
-    scp -P ${host_array[1]} "$config" ${host_array[0]}:~/deploy/quorum-ibft
+    scp -P ${port} ${config} ${hostname}:~/deploy/quorum-ibft
     if [ $? -ne 0 ]; then
       utils::err 'Failed to send configuration file'
+      trap - ERR
       exit 1
     fi
     # untar the configuration file
-    ssh -p ${host_array[1]} ${host_array[0]} "cd ~/deploy/quorum-ibft; tar -xzf ${config##*/} --strip-components=1"
+    ssh -p ${port} ${hostname} "cd ~/deploy/quorum-ibft; tar -xzf ${config##*/} --strip-components=1"
     # increment the index
     index=$((index + 1))
   done
+  # Remove trap
+  trap - ERR
 }
-cmd="send_configuration_files ${hosts_array[@]}"
-utils::exec_cmd "$cmd" 'Sending configuration files'
 
-# finalize the configuration on all hosts
+#===============================================================================
+# MAIN
+#===============================================================================
+
+# Catch errors
+trap 'exit 1' ERR
+
+hosts_array=($(utils::create_remote_hosts_list ${HOST} ${PORT} ${NUMBER_OF_HOSTS}))
+utils::exec_cmd_on_remote_hosts './remote/generate-configuration.sh prepare' 'Preparing remote hosts' "${hosts_array[@]}"
+host=${hosts_array[0]}
+utils::exec_cmd_on_remote_hosts './remote/generate-configuration.sh generate remote/nodefile.txt install/geth-accounts/accounts.txt' 'Generating configuration file' ${host}
+cmd="retrieve_configuration ${host}"
+utils::exec_cmd "${cmd}" 'Retrieving configuration file'
+utils::exec_cmd 'extract_configuration' 'Extracting configuration file'
+utils::exec_cmd 'create_node_configuration' 'Creating node configuration files'
+cmd="send_configuration_files ${hosts_array[@]}"
+utils::exec_cmd "${cmd}" 'Sending configuration files'
 utils::exec_cmd_on_remote_hosts './remote/generate-configuration.sh finalize' 'Finalizing configuration' "${hosts_array[@]}"
 
 trap - ERR

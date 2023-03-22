@@ -28,7 +28,7 @@ func main() {
 		fmt.Println(err)
 		os.Exit(1)
 	}
-	account := common.HexToAddress("0xfa0e6307aefa5873ca7e57dea75aa103a2beefa5")
+	account := common.HexToAddress("0x0680d09b93219925a884e019264e454663e49996")
 	balance, err := client.BalanceAt(context.Background(), account, nil)
 	if err != nil {
 		fmt.Println(err)
