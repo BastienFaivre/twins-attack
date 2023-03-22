@@ -28,16 +28,29 @@
 # Returns:
 #   None
 export() {
-  rsync -rav -e "ssh -p $PORT" \
+  # Catch errors
+  trap 'exit 1' ERR
+  # Create directory
+  ssh -p ${PORT} ${HOST} 'mkdir -p ~/go/src/semester-project'
+  # Export
+  rsync -rav -e "ssh -p ${PORT}" \
     --exclude '.*' \
     --exclude 'node/' \
     --exclude 'quorum/' \
     --exclude 'README.md' \
-    . $HOST:~/go/src/semester-project
+    . ${HOST}:~/go/src/semester-project
+  # Remove trap
+  trap - ERR
 }
 
 #===============================================================================
 # MAIN
 #===============================================================================
 
-utils::exec_cmd 'export' "Export files to $HOST:$PORT"
+# Catch errors
+trap 'exit 1' ERR
+
+utils::exec_cmd 'export' "Export files to ${HOST}:${PORT}"
+
+# Remove trap
+trap - ERR

@@ -1,63 +1,144 @@
 #!/bin/bash
-# Install Quorum blockchain
+#===============================================================================
+# Modified by: Bastien Faivre
+# Project: EPFL Master Semester Project
+# Date: March 2023
+# Description: Install Quorum blockchain
 # Source: https://github.com/Blockchain-Benchmarking/minion/blob/cleanup/script/remote/linux/apt/install-quorum
+#===============================================================================
 
-# read environment file
+#===============================================================================
+# IMPORTS
+#===============================================================================
+
 . remote/remote.env
-
-# import utility functions
 . remote/utils/utils.sh
 
-utils::ask_sudo
+#===============================================================================
+# FUNCTIONS
+#===============================================================================
 
-# install necessary packages
+# Install the necessary packages
+# Globals:
+#   None
+# Arguments:
+#   None
+# Outputs:
+#   None
+# Returns:
+#   None
 install_necessary_packages() {
+  # Catch errors
+  trap 'exit 1' ERR
+  # Install packages
   sudo apt-get update
   sudo apt-get install -y git make build-essential wget
+  # Remove trap
+  trap - ERR
 }
 
-# install go
+# Install Go
+# Globals:
+#   None
+# Arguments:
+#   None
+# Outputs:
+#   None
+# Returns:
+#   None
 install_go() {
-  wget $GO_URL > /dev/null 2>&1
+  # Catch errors
+  trap 'exit 1' ERR
+  # Install Go
+  wget ${GO_URL} > /dev/null 2>&1
   sudo rm -rf /usr/local/go
   sudo tar -C /usr/local -xzf ${GO_URL##*/}
   rm ${GO_URL##*/}
-  # export in .bashrc if not already there
-  if ! grep ~/.profile -e $GO_PATH &> /dev/null
+  # Export in .profile if not already there
+  if ! grep ~/.profile -e ${GO_PATH} &> /dev/null
   then
-    echo "export PATH=\$PATH:$GO_PATH" >> ~/.profile
+    echo "export PATH=\$PATH:${GO_PATH}" >> ~/.profile
   fi
   source ~/.profile
   if ! command -v go &> /dev/null
   then
     utils::err 'Go command not found after installation'
+    trap - ERR
     exit 1
   fi
+  # Remove trap
+  trap - ERR
 }
 
-# create install directory and remove old quorum directory
+# Initialize directories
+# Globals:
+#   None
+# Arguments:
+#   None
+# Outputs:
+#   None
+# Returns:
+#   None
 initialize_directories() {
-  mkdir -p $INSTALL_FOLDER
-  rm -rf $INSTALL_ROOT
+  # Catch errors
+  trap 'exit 1' ERR
+  # Initialize directories
+  mkdir -p ${INSTALL_FOLDER}
+  rm -rf ${INSTALL_ROOT}
+  # Remove trap
+  trap - ERR
 }
 
-# clone quorum and build
+# Clone and build Quorum
+# Globals:
+#   None
+# Arguments:
+#   None
+# Outputs:
+#   None
+# Returns:
+#   None
 clone_and_build_quorum() {
-  git clone $QUORUM_URL $INSTALL_ROOT
-  cd $INSTALL_ROOT
-  git checkout $QUORUM_BRANCH
+  # Catch errors
+  trap 'exit 1' ERR
+  # Clone and build Quorum
+  git clone ${QUORUM_URL} ${INSTALL_ROOT}
+  cd ${INSTALL_ROOT}
+  git checkout ${QUORUM_BRANCH}
   make all
+  # Remove trap
+  trap - ERR
 }
 
-# clone istanbul and build
+# Clone and build Istanbul
+# Globals:
+#   None
+# Arguments:
+#   None
+# Outputs:
+#   None
+# Returns:
+#   None
 clone_and_build_istanbul() {
-  git clone $INSTANBUL_URL $INSTALL_ROOT/istanbul-tools
-  cd $INSTALL_ROOT/istanbul-tools
-  git checkout $INSTANBUL_BRANCH
+  # Catch errors
+  trap 'exit 1' ERR
+  # Clone and build Istanbul
+  git clone ${INSTANBUL_URL} ${INSTALL_ROOT}/istanbul-tools
+  cd ${INSTALL_ROOT}/istanbul-tools
+  git checkout ${INSTANBUL_BRANCH}
   make
+  # Remove trap
+  trap - ERR
 }
 
-trap "echo 'Aborting...'; exit 1" ERR
+#===============================================================================
+# MAIN
+#===============================================================================
+
+# Catch errors
+trap 'exit 1' ERR
+
+utils::ask_sudo
 utils::exec_cmd 'install_necessary_packages' 'Install necessary packages'
 if ! command -v go &> /dev/null
 then
@@ -66,10 +147,13 @@ then
   if ! command -v go &> /dev/null
   then
     utils::err 'Go command not found after installation'
+    trap - ERR
     exit 1
   fi
 fi
 utils::exec_cmd 'initialize_directories' 'Initialize directories'
 utils::exec_cmd 'clone_and_build_quorum' 'Clone and build Quorum'
 utils::exec_cmd 'clone_and_build_istanbul' 'Clone and build Istanbul'
+
+# Remove trap
 trap - ERR

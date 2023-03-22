@@ -1,62 +1,98 @@
 #!/bin/bash
-# Start or stop the quorum nodes present in the remote host
+#===============================================================================
+# Modified by: Bastien Faivre
+# Project: EPFL Master Semester Project
+# Date: March 2023
+# Description: Manage the Quorum node of the host
 # Source: https://github.com/Blockchain-Benchmarking/minion/blob/cleanup/script/remote/quorum-ibft
+#===============================================================================
 
-# read environment file
+#===============================================================================
+# IMPORTS
+#===============================================================================
+
 . remote/remote.env
-
-# import utility functions
 . remote/utils/utils.sh
 
-utils::ask_sudo
+#===============================================================================
+# FUNCTIONS
+#===============================================================================
 
-# check that the installation has been completed
+# Check that the necessary commands are available and export them
+# Globals:
+#   None
+# Arguments:
+#   None
+# Outputs:
+#   None
+# Returns:
+#   None
 setup_environment() {
-  # check that quorum is installed
-  if [ ! -d "$INSTALL_ROOT" ]; then
+  # Catch errors
+  trap 'exit 1' ERR
+  # Check that quorum is installed
+  if [ ! -d ${INSTALL_ROOT} ]; then
     echo 'Quorum is not installed. Please run install_quorum.sh first.'
+    trap - ERR
     exit 1
   fi
-  # export bin directories
-  export PATH="$PATH:$HOME/$INSTALL_ROOT/build/bin"
-  export PATH="$PATH:$HOME/$INSTALL_ROOT/istanbul-tools/build/bin"
-  # check that the geth and istanbul commands are available
+  # Export bin directories
+  export PATH=${PATH}:${HOME}/${INSTALL_ROOT}/build/bin
+  export PATH=${PATH}:${HOME}/${INSTALL_ROOT}/istanbul-tools/build/bin
+  # Check that the geth and istanbul commands are available
   if ! command -v geth &> /dev/null
   then
-    utils::err "Geth command not found in $INSTALL_ROOT/build/bin"
+    utils::err "Geth command not found in ${INSTALL_ROOT}/build/bin"
+    trap - ERR
     exit 1
   fi
   if ! command -v istanbul &> /dev/null
   then
-    utils::err "Istanbul command not found in $INSTALL_ROOT/istanbul-tools/build/bin"
+    utils::err \
+      "Istanbul command not found in ${INSTALL_ROOT}/istanbul-tools/build/bin"
+    trap - ERR
     exit 1
   fi
+  # Remove trap
+  trap - ERR
 }
 
+# Start the nodes
+# Globals:
+#   None
+# Arguments:
+#   None
+# Outputs:
+#   None
+# Returns:
+#   None
 start() {
-  # retrieve arguments
-  local twins="${1}"
+  # Catch errors
+  trap 'exit 1' ERR
+  # Retrieve arguments
+  local twins=${1}
   export PRIVATE_CONFIG=ignore
-  # start the nodes
-  for dir in $DEPLOY_ROOT/n*; do
+  # Start the nodes
+  for dir in ${DEPLOY_ROOT}/n*; do
     # check that dir is a directory
-    if [ ! -d "$dir" ]; then
+    if [ ! -d ${dir} ]; then
     continue
     fi
     # if twins argument is not provided, ignore twin nodes
-    if [ -z "$twins" ] && [[ $dir == *"twin"* ]]; then
+    if [ -z ${twins} ] && [[ ${dir} == *"twin"* ]]; then
       continue
     fi
     # retrieve node port and rpc port
-    port=$(cat $dir/port)
-    rpcport=$(cat $dir/rpcport)
+    port=$(cat ${dir}/port)
+    rpcport=$(cat ${dir}/rpcport)
     # verify the ports
-    if [ -z "$port" ] || [ -z "$rpcport" ]; then
-      utils::err "Could not retrieve port or rpc port for node $dir"
+    if [ -z ${port} ] || [ -z ${rpcport} ]; then
+      utils::err "Could not retrieve port or rpc port for node ${dir}"
+      trap - ERR
       exit 1
     fi
     # start the node
-    geth --datadir $dir \
+    geth --datadir ${dir} \
       --allow-insecure-unlock \
       --nodiscover \
       --istanbul.blockperiod 5 \
@@ -67,68 +103,121 @@ start() {
       --networkid 10 \
       --ws \
       --ws.addr 0.0.0.0 \
-      --ws.port $rpcport \
+      --ws.port ${rpcport} \
       --ws.api admin,eth,debug,miner,net,txpool,personal,web3,istanbul \
       --ws.origins "*" \
       --emitcheckpoints \
-      --port $port \
+      --port ${port} \
       --http \
-      --http.port $rpcport \
-      > $dir/out.log 2> $dir/err.log &
+      --http.port ${rpcport} \
+      > ${dir}/out.log 2> ${dir}/err.log &
     pid=$!
-    echo $pid > $dir/pid
+    echo ${pid} > ${dir}/pid
   done
   # make sure that the nodes are started and connected
   sleep 5
 }
 
+# Stop the nodes with a signal
+# Globals:
+#   None
+# Arguments:
+#   $1: signal to send to the nodes
+# Outputs:
+#   None
+# Returns:
+#   None
 _kill() {
-  # read argument
+  # Catch errors
+  trap 'exit 1' ERR
+  # Retrieve arguments
   local sig="${1}"
-  # kill the nodes
-  for dir in $DEPLOY_ROOT/n*; do
-    # check that dir is a directory
-    if [ ! -d "$dir" ]; then
+  if [ -z "${sig}" ]; then
+    utils::err "Signal not provided"
+    trap - ERR
+    exit 1
+  fi
+  # Kill the nodes
+  for dir in ${DEPLOY_ROOT}/n*; do
+    # Check that dir is a directory
+    if [ ! -d ${dir} ]; then
       continue
     fi
-    # retrieve pid
-    if [ ! -f "$dir/pid" ]; then
+    # Retrieve pid
+    if [ ! -f ${dir}/pid ]; then
       continue
     fi
-    pid=$(cat $dir/pid)
-    # kill the node
-    kill $sig $pid
-    # remove pid file
-    rm $dir/pid
+    pid=$(cat ${dir}/pid)
+    # Kill the node
+    kill ${sig} ${pid}
+    # Remove pid file
+    rm ${dir}/pid
   done
+  # Remove trap
+  trap - ERR
 }
 
+# Stop the nodes with SIGINT
+# Globals:
+#   None
+# Arguments:
+#   None
+# Outputs:
+#   None
+# Returns:
+#   None
 stop() {
+  # Catch errors
+  trap 'exit 1' ERR
+  # Stop the nodes
   _kill -SIGINT
+  # Remove trap
+  trap - ERR
 }
 
+# Kill the nodes with SIGKILL
+# Globals:
+#   None
+# Arguments:
+#   None
+# Outputs:
+#   None
+# Returns:
+#   None
 nkill() {
+  # Catch errors
+  trap 'exit 1' ERR
+  # Kill the nodes
   _kill -SIGKILL
+  # Remove trap
+  trap - ERR
 }
 
-setup_environment
+#===============================================================================
+# MAIN
+#===============================================================================
 
-# read argument
+# Read arguments
 if [ $# -lt 1 ]; then
   echo "Usage: $0 start|stop|kill [twins]"
   exit 1
 fi
-action=$1; shift
-twins=$1; shift
+action=${1}
+twins=${2}
 if [ ! -z "$twins" ] && [ "$twins" != "twins" ]; then
   echo "Usage: $0 start|stop|kill [twins]"
   exit 1
 fi
 
-case $action in
+# Catch errors
+trap 'exit 1' ERR
+
+utils::ask_sudo
+setup_environment
+case ${action} in
   start)
-    cmd="start $twins"
-    utils::exec_cmd "$cmd" "Start all nodes"
+    cmd="start ${twins}"
+    utils::exec_cmd "${cmd}" "Start all nodes"
     ;;
   stop)
     utils::exec_cmd stop "Stop all nodes"
@@ -138,6 +227,10 @@ case $action in
     ;;
   *)
     echo "Usage: $0 start|stop|kill [twins]"
+    trap - ERR
     exit 1
     ;;
 esac
+
+# Remove trap
+trap - ERR

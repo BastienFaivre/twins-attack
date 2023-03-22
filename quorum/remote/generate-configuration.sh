@@ -49,7 +49,7 @@ setup_environment() {
   if ! command -v istanbul &> /dev/null
   then
     utils::err \
-      "Istanbul command not found in ${INSTALL_ROOT}/istanbul-tools/build/bin"$
+      "Istanbul command not found in ${INSTALL_ROOT}/istanbul-tools/build/bin"
     trap - ERR
     exit 1
   fi
