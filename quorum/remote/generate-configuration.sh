@@ -125,13 +125,13 @@ set_nodes_ip_port() {
   # Retrieve arguments
   local static_nodes_file=${1}
   local nodefile=${2}
-  if [ -z ${static_nodes_file} ]; then
-    echo 'Missing static-nodes.json file.'
+  if [ ! -f ${static_nodes_file} ]; then
+    echo "Static-nodes.json file ${static_nodes_file} does not exist."
     trap - ERR
     exit 1
   fi
-  if [ -z ${nodefile} ]; then
-    echo 'Missing nodefile.'
+  if [ ! -f ${nodefile} ]; then
+    echo "Nodefile ${nodefile} does not exist."
     trap - ERR
     exit 1
   fi
@@ -181,19 +181,19 @@ initialize_accounts() {
   # Retrieve arguments
   local genesis=${1}
   local keyfile=${2}
-  if [ -z ${genesis} ]; then
-    echo 'Missing genesis file.'
+  if [ ! -f ${genesis} ]; then
+    echo "Genesis file ${genesis} does not exist."
     trap - ERR
     exit 1
   fi
-  if [ -z ${keyfile} ]; then
-    echo 'Missing keyfile.'
+  if [ ! -f ${keyfile} ]; then
+    echo "Keyfile ${keyfile} does not exist."
     trap - ERR
     exit 1
   fi
   # Read the genesis file
   while IFS= read -r line; do
-    echo ${line}
+    echo "${line}" # double quotes are important to preserve spaces
     # Check if the line contains the string "alloc"
     if [[ ${line} == *"alloc"* ]]; then
       while IFS= read -r account; do
@@ -227,8 +227,8 @@ initialize_nodes() {
   # Retrieve arguments
   local nodefile=${1}
   local number_of_nodes=${2}
-  if [ -z ${nodefile} ]; then
-    echo 'Missing nodefile.'
+  if [ ! -f ${nodefile} ]; then
+    echo "Nodefile ${nodefile} does not exist."
     trap - ERR
     exit 1
   fi
