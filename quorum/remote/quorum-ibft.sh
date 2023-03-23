@@ -83,8 +83,8 @@ start() {
       continue
     fi
     # retrieve node port and rpc port
-    port=$(cat ${dir}/port)
-    rpcport=$(cat ${dir}/rpcport)
+    local port=$(cat ${dir}/port)
+    local rpcport=$(cat ${dir}/rpcport)
     # verify the ports
     if [ -z ${port} ] || [ -z ${rpcport} ]; then
       utils::err "Could not retrieve port or rpc port for node ${dir}"
@@ -109,9 +109,12 @@ start() {
       --emitcheckpoints \
       --port ${port} \
       --http \
+      --http.addr 0.0.0.0 \
       --http.port ${rpcport} \
+      --http.corsdomain "*" \
+      --http.api admin,eth,debug,miner,net,txpool,personal,web3,istanbul \
       > ${dir}/out.log 2> ${dir}/err.log &
-    pid=$!
+    local pid=$!
     echo ${pid} > ${dir}/pid
   done
   # make sure that the nodes are started and connected
