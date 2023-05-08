@@ -31,7 +31,7 @@ setup_environment() {
   trap 'exit 1' ERR
   # Check that quorum is installed
   if [ ! -d ${INSTALL_ROOT} ]; then
-    echo 'Quorum is not installed. Please run install_quorum.sh first.'
+    echo 'Quorum is not installed. Please run install-quorum.sh first.'
     trap - ERR
     exit 1
   fi

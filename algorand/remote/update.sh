@@ -3,21 +3,21 @@
 # Author: Bastien Faivre
 # Project: EPFL Master Semester Project
 # Date: May 2023
-# Description: Export the remote directory to the remote hosts
+# Description: Update the host
 #===============================================================================
 
 #===============================================================================
 # IMPORTS
 #===============================================================================
 
-. local.env
-. utils/utils.sh
+. remote/remote.env
+. remote/utils/utils.sh
 
 #===============================================================================
 # FUNCTIONS
 #===============================================================================
 
-# Export the remote directory to the remote hosts
+# Update the host
 # Globals:
 #   None
 # Arguments:
@@ -26,18 +26,16 @@
 #   None
 # Returns:
 #   None
-export_remote_directory() {
+update_host() {
   # Catch errors
   trap 'exit 1' ERR
-  # Export
-  (
-    cd ..
-    for i in $(seq 0 $((NUMBER_OF_HOSTS - 1)))
-    do
-      rsync -rav -e "ssh -p $((PORT + i))" --exclude 'local/' . ${HOST}:~ &
-    done
-    wait
-  )
+  # Update
+  sudo apt-get update
+  sudo apt-get --with-new-pkgs upgrade -y
+  sudo apt-get clean
+  sudo apt-get autoclean
+  sudo apt-get autoremove --purge -y
+  sudo snap refresh
   # Remove trap
   trap - ERR
 }
@@ -49,7 +47,8 @@ export_remote_directory() {
 # Catch errors
 trap 'exit 1' ERR
 
-utils::exec_cmd 'export_remote_directory' "Export the remote directory to remote hosts"
+utils::ask_sudo
+utils::exec_cmd 'update_host' 'Update host'
 
 # Remove trap
 trap - ERR

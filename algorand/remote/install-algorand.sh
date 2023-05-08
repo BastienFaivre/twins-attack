@@ -32,7 +32,7 @@ install_necessary_packages() {
   trap 'exit 1' ERR
   # Install packages
   sudo apt-get update
-  sudo apt-get install -y git make python3 python3-pip wget
+  sudo apt-get install -y git make python3 python3-pip wget libtool-bin libboost-all-dev
   # Remove trap
   trap - ERR
 }
@@ -106,10 +106,17 @@ clone_and_build_algorand() {
   (
     cd ${INSTALL_ROOT}
     git checkout ${ALGORAND_BRANCH}
+    sudo --non-interactive --preserve-env='PATH' ./scripts/configure_dev.sh
+    make install
   )
+  pip3 install pyteal
   mkdir ${INSTALL_ROOT}/algorand-tools
   (
     cd ${INSTALL_ROOT}/algorand-tools
+    cp ~/remote/main.go .
+    go mod init "algorand-chainfile-generator"
+    go mod tidy
+    go build -o algorand-chainfile-generator
   )
   # Remove trap
   trap - ERR
@@ -137,7 +144,6 @@ then
 fi
 utils::exec_cmd 'initialize_directories' 'Initialize directories'
 utils::exec_cmd 'clone_and_build_algorand' 'Clone and build Algorand'
-utils::exec_cmd 'clone_and_build_istanbul' 'Clone and build Istanbul'
 
 # Remove trap
 trap - ERR

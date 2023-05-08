@@ -2,9 +2,9 @@
 #===============================================================================
 # Modified by: Bastien Faivre
 # Project: EPFL Master Semester Project
-# Date: March 2023
-# Description: Generate configuration files for Quorum
-# Source: https://github.com/Blockchain-Benchmarking/minion/blob/cleanup/script/remote/deploy-quorum-ibft-worker
+# Date: May 2023
+# Description: Generate configuration files for Algorand
+# Source: https://github.com/Blockchain-Benchmarking/minion/blob/cleanup/script/remote/deploy-algorand-worker
 #===============================================================================
 
 #===============================================================================
@@ -32,24 +32,17 @@ setup_environment() {
   trap 'exit 1' ERR
   # Check that quorum is installed
   if [ ! -d ${INSTALL_ROOT} ]; then
-    echo 'Quorum is not installed. Please run install-quorum.sh first.'
+    echo 'Algorand is not installed. Please run install-algorand.sh first.'
     trap - ERR
     exit 1
   fi
   # Export bin directories
-  export PATH=${PATH}:${HOME}/${INSTALL_ROOT}/build/bin
-  export PATH=${PATH}:${HOME}/${INSTALL_ROOT}/istanbul-tools/build/bin
+  export PATH=${PATH}:${HOME}/go/bin
+  export PATH=${PATH}:${HOME}/${INSTALL_ROOT}/algorand-tools
   # Check that the geth and istanbul commands are available
-  if ! command -v geth &> /dev/null
+  if ! command -v goal &> /dev/null
   then
-    utils::err "Geth command not found in ${INSTALL_ROOT}/build/bin"
-    trap - ERR
-    exit 1
-  fi
-  if ! command -v istanbul &> /dev/null
-  then
-    utils::err \
-      "Istanbul command not found in ${INSTALL_ROOT}/istanbul-tools/build/bin"
+    utils::err "Goal command not found in /go/bin"
     trap - ERR
     exit 1
   fi
@@ -74,6 +67,8 @@ prepare() {
   # Create deploy directory
   rm -rf ${DEPLOY_ROOT}
   mkdir -p ${DEPLOY_ROOT}
+  # Create prepare directory
+  mkdir -p ${PREPARE_ROOT}
   # Remove trap
   trap - ERR
 }
