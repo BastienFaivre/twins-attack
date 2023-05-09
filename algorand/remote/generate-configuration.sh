@@ -73,275 +73,265 @@ prepare() {
   trap - ERR
 }
 
-# Prepare the network root directory and create a directory for each node
-# Globals:
-#   None
-# Arguments:
-#   $1: number of nodes
-# Outputs:
-#   None
-# Returns:
-#   None
-prepare_network_root() {
+function build_network_template() {
   # Catch errors
   trap 'exit 1' ERR
   # Retrieve arguments
-  local number_of_nodes=${1}
-  if [ -z ${number_of_nodes} ]; then
-    echo 'Missing number of nodes.'
-    trap - ERR
-    exit 1
-  fi
-  # Create network root directory
-  rm -rf ${NETWORK_ROOT}
-  mkdir -p ${NETWORK_ROOT}
-  # Create a directory for each node
-  for i in $(seq 0 $((number_of_nodes - 1))); do
-    mkdir ${NETWORK_ROOT}/n${i}
-    mkdir ${NETWORK_ROOT}/n${i}_twin
+  local path="$1"
+  local nodefile="$2"
+  local nodenum=$(wc -l < ${nodefile})
+  local walletnum=$nodenum
+  local share=$(echo "scale=2; 100.0 / $walletnum" | bc)
+  local rem=$(echo "scale=2; 100.0 - ($share * $walletnum)" | bc)
+  echo "{" > "$path"
+  echo '    "Genesis": {' >> "$path"
+  echo '        "NetworkName": "PrivateNet",' >> "$path"
+  echo '        "Wallets": [' >> "$path"
+  local sep=""
+  for ((i = 0; i < walletnum; i++)); do
+    if [ $i -eq 0 ]; then
+      stake=$(echo "scale=2; $share + $rem" | bc)
+    else
+      stake=$share
+    fi
+    echo -n "$sep" >> "$path"
+    cat << EOF >> "$path"
+      {
+        "Name": "wallet_$i",
+        "Stake": $stake,
+        "Online": true
+      }
+EOF
+    sep=','
   done
+
+  echo '        ]' >> "$path"
+  echo '    },' >> "$path"
+  echo '    "Nodes": [' >> "$path"
+  sep=""
+  for ((i = 0; i < walletnum; i++)); do
+    name="n$i"
+    printf "%s" "$sep" >> "$path"
+    cat << EOF >> "$path"
+    {
+      "Name": "$name",
+      "IsRelay": true,
+      "Wallets": [
+        {
+          "Name": "wallet_$i",
+          "ParticipationOnly": false
+        }
+      ]
+    }
+EOF
+    sep=","
+  done
+
+  echo '    ]' >> "$path"
+  echo "}" >> "$path"
   # Remove trap
   trap - ERR
 }
 
-# Set the ip and port of each node in the static-nodes.json file
+# Kill all kmd processes
 # Globals:
 #   None
 # Arguments:
-#   $1: static-nodes.json file
+#   $1: network root directory
+# Outputs:
+#   None
+# Returns:
+#   None
+kill_kmd_processes() {
+  # Catch errors
+  trap 'exit 1' ERR
+  # Kill all kmd processes
+  local netroot=${1}
+  local datadir pid pids
+  for datadir in ${netroot}/n* ${netroot}/c*; do
+    pid=$(ps -eo pid,args | grep -v 'grep' | grep 'kmd' \
+		  | grep "${datadir}kmd-v" | awk '{print $1}')
+    pids+=(${pid})
+  done
+  if [ ${#pids[@]} -ne 0 ]; then
+    kill -TERM ${pids[@]}
+  fi
+  # Remove trap
+  trap - ERR
+}
+
+# Set the goal network address
+# Globals:
+#   None
+# Arguments:
+#   $1: network root directory
 #   $2: nodefile
 # Outputs:
 #   None
 # Returns:
 #   None
-set_nodes_ip_port() {
+set_goal_network_address() {
   # Catch errors
   trap 'exit 1' ERR
   # Retrieve arguments
-  local static_nodes_file=${1}
+  local netroot=${1}
   local nodefile=${2}
-  if [ ! -f ${static_nodes_file} ]; then
-    echo "Static-nodes.json file ${static_nodes_file} does not exist."
-    trap - ERR
-    exit 1
-  fi
-  if [ ! -f ${nodefile} ]; then
-    echo "Nodefile ${nodefile} does not exist."
-    trap - ERR
-    exit 1
-  fi
-  # Read the static-nodes.json file
-  local index=1
-  while IFS= read -r line; do
-    # Check if the line does not contain the string "enode"
-    if [[ ! ${line} == *"enode"* ]]; then
-      echo ${line} >> ${static_nodes_file}.tmp
-      echo ${line} >> ${static_nodes_file}.twin
-      continue
-    fi
-    # Retrieve node ip and port from the nodefile
-    local node=$(sed -n "${index}p" ${nodefile})
-    local node_ip=$(echo ${node} | cut -d: -f1)
-    local node_port=$(echo ${node} | cut -d: -f2)
-    local node_port_twin=$(echo ${node} | cut -d: -f4)
-    # Replace the ip and port in the enode uri
-    local new_line=$(echo ${line} | sed "s/@.*?/@${node_ip}:${node_port}?/")
-    echo ${new_line} >> ${static_nodes_file}.tmp
-    local new_line_twin=$(echo ${line} | sed "s/@.*?/@${node_ip}:${node_port_twin}?/")
-    echo ${new_line_twin} >> ${static_nodes_file}.twin
-    # Increment the index
-    index=$((index + 1))
-  done < ${static_nodes_file}
-  echo ']' >> ${static_nodes_file}.tmp
-  echo ']' >> ${static_nodes_file}.twin
-  # Replace the static-nodes.json file with the new one
-  mv ${static_nodes_file}.tmp ${static_nodes_file}
-  # Remove trap
-  trap - ERR
-}
-
-# Initialize the accounts in the genesis file
-# Globals:
-#   None
-# Arguments:
-#   $1: genesis file
-#   $2: keyfile
-# Outputs:
-#   None
-# Returns:
-#   None
-initialize_accounts() {
-  # Catch errors
-  trap 'exit 1' ERR
-  # Retrieve arguments
-  local genesis=${1}
-  local keyfile=${2}
-  if [ ! -f ${genesis} ]; then
-    echo "Genesis file ${genesis} does not exist."
-    trap - ERR
-    exit 1
-  fi
-  if [ ! -f ${keyfile} ]; then
-    echo "Keyfile ${keyfile} does not exist."
-    trap - ERR
-    exit 1
-  fi
-  # Read the genesis file
-  while IFS= read -r line; do
-    echo "${line}" # double quotes are important to preserve spaces
-    # Check if the line contains the string "alloc"
-    if [[ ${line} == *"alloc"* ]]; then
-      while IFS= read -r account; do
-        address=$(echo ${account} | cut -d: -f1)
-        printf "        \"%s\": {\n" ${address}
-		    printf "            \"balance\": \"%s\"\n" ${BALANCE}
-		    printf "        },\n"
-      done < ${keyfile}
-    fi
-  done < ${genesis} > ${genesis}.tmp
-  echo '}' >> ${genesis}.tmp
-  # Replace the genesis file
-  mv ${genesis}.tmp ${genesis}
-  # Remove trap
-  trap - ERR
-}
-
-# Initialize the nodes with their nodekey, port, and rpc port
-# Globals:
-#   None
-# Arguments:
-#   $1: nodefile
-#   $2: number of nodes
-# Outputs:
-#   None
-# Returns:
-#   None
-initialize_nodes() {
-  # Catch errors
-  trap 'exit 1' ERR
-  # Retrieve arguments
-  local nodefile=${1}
-  local number_of_nodes=${2}
-  if [ ! -f ${nodefile} ]; then
-    echo "Nodefile ${nodefile} does not exist."
-    trap - ERR
-    exit 1
-  fi
-  if [ -z ${number_of_nodes} ]; then
-    echo 'Missing number of nodes.'
-    trap - ERR
-    exit 1
-  fi
-  # Initialize nodes
-  for i in $(seq 0 $((number_of_nodes - 1))); do
-    # Retrieve node port and rpc port from the nodefile
-    local node=$(sed -n "$((i+1))p" ${nodefile})
-    local node_port=$(echo ${node} | cut -d: -f2)
-    local rpc_port=$(echo ${node} | cut -d: -f3)
-    local node_port_twin=$(echo ${node} | cut -d: -f4)
-    local rpc_port_twin=$(echo ${node} | cut -d: -f5)
-    # Copy the nodekey to the node directory and remove the old directory
-    cp ${NETWORK_ROOT}/${i}/nodekey ${NETWORK_ROOT}/n${i}/nodekey
-    cp ${NETWORK_ROOT}/${i}/nodekey ${NETWORK_ROOT}/n${i}_twin/nodekey
-    chmod 644 ${NETWORK_ROOT}/n${i}/nodekey
-    chmod 644 ${NETWORK_ROOT}/n${i}_twin/nodekey
-    rm -rf ${NETWORK_ROOT}/${i}
-    # Add port and rpc port files to the node directory
-    echo ${node_port} > ${NETWORK_ROOT}/n${i}/port
-    echo ${rpc_port} > ${NETWORK_ROOT}/n${i}/rpcport
-    echo ${node_port_twin} > ${NETWORK_ROOT}/n${i}_twin/port
-    echo ${rpc_port_twin} > ${NETWORK_ROOT}/n${i}_twin/rpcport
+  local nodenum i peerport clientport
+  nodenum=$(wc -l < ${nodefile})
+  # Set the goal network address
+  for i in $(seq 1 ${nodenum}); do
+    peerport=$(sed -n "${i}p" ${nodefile} | cut -d: -f2)
+    clientport=$(sed -n "${i}p" ${nodefile} | cut -d: -f3)
+    sed -ri 's/"NetAddress":.*/"NetAddress": "'"0.0.0.0:${peerport}"'",/' \
+        "${netroot}/n$(( i - 1 ))/config.json"
+    sed -ri 's/\{/\{\n\t"ConnectionsRateLimitingWindowSeconds": 0,/' \
+        "${netroot}/n$(( i - 1 ))/config.json"
+    sed -ri 's/\{/\{\n\t"EndpointAddress": "'":${clientport}"'",/' \
+        "${netroot}/n$(( i - 1 ))/config.json"
+    sed -ri 's/\{/\{\n\t"EnableDeveloperAPI": true,/' \
+        "${netroot}/n$(( i - 1 ))/config.json"
   done
   # Remove trap
   trap - ERR
 }
 
-# Generate the configuration files
+# Generate full and client nodes start script
 # Globals:
 #   None
 # Arguments:
-#   $1: nodefile
-#   $2: keyfile
+#   $1: network root directory
+#   $2: nodefile
 # Outputs:
 #   None
 # Returns:
 #   None
+generate_start_scripts() {
+  # Catch errors
+  trap 'exit 1' ERR
+  # Retrieve arguments
+  local netroot=${1}
+  local nodefile=${2}
+  local nodenum i addr peers sep
+  nodenum=$(wc -l < ${nodefile})
+  sep=''
+  # Generate full and client nodes start script
+  for i in $(seq 1 ${nodenum}); do
+    (
+      echo "#!/bin/bash"
+      if [ "x${peers}" = 'x' ]; then
+        echo 'exec goal node start --datadir "${0%/*}"'
+      else
+        echo 'exec goal node start --datadir "${0%/*}" --peer' \
+        "'${peers}'"
+      fi
+    ) > "${netroot}/n$(( i - 1 ))/start.sh"
+    chmod +x "${netroot}/n$(( i - 1 ))/start.sh"
+    addr=$(sed -n "${i}p" ${nodefile} | cut -d: -f1,2)
+    peers="${peers}${sep}${addr}"
+    sep=';'
+  done
+  # Remove trap
+  trap - ERR
+}
+
+# Generate an Algorand token for each node
+# Globals:
+#   None
+# Arguments:
+#   $1: network root directory
+#   $2: nodefile
+# Outputs:
+#   None
+# Returns:
+#   None
+generate_algod_tokens() {
+  # Catch errors
+  trap 'exit 1' ERR
+  # Retrieve arguments
+  local netroot=${1}
+  local nodefile=${2}
+  local nodenum clientnum i token path
+  nodenum=$(wc -l < ${nodefile})
+  token='aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
+  # Generate an Algorand token for each node
+  for i in $(seq 1 ${nodenum}); do
+    path="${netroot}/n$(( i - 1 ))/algod.token"
+    printf "%s" "${token}" > "${path}"
+  done
+  # Remove trap
+  trap - ERR
+}
+
+# Generate the extra config containing the account addresses and mnemonics
+# Globals:
+#   None
+# Arguments:
+#   $1: network root directory
+#   $2: nodefile
+# Outputs:
+#   None
+# Returns:
+#   None
+generate_chainconfig() {
+  # Catch errors
+  trap 'exit 1' ERR
+  # Retrieve arguments
+  local netroot=${1}
+  local nodefile=${2}
+  local nodenum
+  nodenum=$(wc -l < ${nodefile})
+  # Generate the extra config containing the account addresses and mnemonics
+  algorand-chainfile-generator "${netroot}" "${nodenum}" "${netroot}/accounts.yaml"
+  # Remove trap
+  trap - ERR
+}
+
 generate() {
   # Catch errors
   trap 'exit 1' ERR
   # Retrieve arguments
-  if [ $# -ne 2 ]; then
-    echo "Usage: $0 generate <nodefile> <keyfile>"
+  if [ $# -ne 1 ]; then
+    echo "Usage: $0 generate <nodefile>"
     trap - ERR
     exit 1
   fi
   local nodefile=${1}
-  local keyfile=${2}
-  if [ ! -f ${nodefile} ]; then
-    echo "Nodefile ${nodefile} does not exist."
+  local template=${DEPLOY_ROOT}/template.json
+  local logfile=${DEPLOY_ROOT}/generate.log
+  local netroot=${DEPLOY_ROOT}/network
+  setup_environment
+  if ! build_network_template ${template} ${nodefile} > ${logfile} 2>&1; then
+    cat ${logfile}
+    utils::err 'Failed to build network template'
     trap - ERR
     exit 1
   fi
-  if [ ! -f ${keyfile} ]; then
-    echo "Keyfile ${keyfile} does not exist."
-    trap - ERR
-    exit 1
+  rm -rf ${netroot}
+  local nodenum=$(wc -l < ${nodefile})
+  local prepared_path=${PREPARE_ROOT}/network-${nodenum}
+  if [ ! -e ${prepared_path} ]; then
+    echo ${prepared_path}
+    echo ${template}
+    if ! goal network create --rootdir ${prepared_path} --network 'private' \
+      --template ${template} > ${logfile} 2>&1; then
+      cat ${logfile}
+      utils::err 'Failed to create network'
+      trap - ERR
+      exit 1
+    fi
+    kill_kmd_processes ${prepared_path}
+    generate_chainconfig ${prepared_path} ${nodefile}
+    generate_algod_tokens ${prepared_path} ${nodefile}
+    rm ${prepared_path}/genesis.json
+    rm ${prepared_path}/network.json
+    rm ${prepared_path}/*.rootkey*
+    rm ${prepared_path}/*.partkey*
   fi
-  # Setup environment
-  setup_environment
-  # Count the number of nodes
-  local number_of_nodes=$(wc -l < ${nodefile})
-  # prepare network root
-  prepare_network_root ${number_of_nodes}
-  # run istanbul setup
-  (
-    cd ${NETWORK_ROOT}
-    istanbul setup --num ${number_of_nodes} --nodes --quorum --save --verbose
-  )
-  set_nodes_ip_port ${NETWORK_ROOT}/static-nodes.json ${nodefile}
-  initialize_accounts ${NETWORK_ROOT}/genesis.json ${keyfile}
-  initialize_nodes ${nodefile} ${number_of_nodes}
-  tar -C ${DEPLOY_ROOT} -czf ${NETWORK_ROOT}.tar.gz 'network'
-  rm -rf ${NETWORK_ROOT}
-  # Remove trap
-  trap - ERR
-}
-
-# Finalize the configuration
-# Globals:
-#   None
-# Arguments:
-#   None
-# Outputs:
-#   None
-# Returns:
-#   None
-finalize() {
-  # Catch errors
-  trap 'exit 1' ERR
-  # Setup environment
-  setup_environment
-  local genesis=${DEPLOY_ROOT}/genesis.json
-  local static_nodes=${DEPLOY_ROOT}/static-nodes.json
-  # Remove network root
-  rm -rf ${NETWORK_ROOT}
-  # Iterate over all nodes directories
-  for dir in ${DEPLOY_ROOT}/n*; do
-    # Check that dir is a directory
-    if [ ! -d ${dir} ]; then
-      continue
-    fi
-    # Copy the right static-nodes.json file to the node directory
-    if [[ ${dir} == *"twin"* ]]; then
-      cp ${static_nodes}.twin ${dir}/static-nodes.json
-    else
-      cp ${static_nodes} ${dir}/static-nodes.json
-    fi
-    # Initialize the node
-    geth --datadir ${dir} init ${genesis} > /dev/null 2>&1
-  done
-  # Remove the genesis.json and static-nodes.json files
-  rm ${genesis} ${static_nodes}*
+  cp -r ${prepared_path} ${netroot}
+  set_goal_network_address ${netroot} ${nodefile}
+  generate_start_scripts ${netroot} ${nodefile}
+  cp ${netroot}/accounts.yaml ${DEPLOY_ROOT}/accounts.yaml
+  tar -C ${DEPLOY_ROOT} -czf ${netroot}.tar.gz 'network'
   # Remove trap
   trap - ERR
 }
@@ -368,11 +358,8 @@ case ${action} in
     ;;
   'generate')
     cmd="generate $@"
-    utils::exec_cmd "${cmd}" 'Generate configuration files'
-    ;;
-  'finalize')
-    cmd="finalize $@"
-    utils::exec_cmd "${cmd}" 'Finalize configuration'
+    # utils::exec_cmd "${cmd}" 'Generate configuration files'
+    ${cmd}
     ;;
   *)
     echo "Usage: $0 <action> [options...]"
