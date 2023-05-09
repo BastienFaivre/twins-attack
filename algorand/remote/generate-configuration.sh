@@ -298,7 +298,7 @@ generate() {
   local nodefile=${1}
   local template=${DEPLOY_ROOT}/template.json
   local logfile=${DEPLOY_ROOT}/generate.log
-  local netroot=${DEPLOY_ROOT}/network
+  local netroot=${NETWORK_ROOT}
   setup_environment
   if ! build_network_template ${template} ${nodefile} > ${logfile} 2>&1; then
     cat ${logfile}
@@ -332,6 +332,7 @@ generate() {
   generate_start_scripts ${netroot} ${nodefile}
   cp ${netroot}/accounts.yaml ${DEPLOY_ROOT}/accounts.yaml
   tar -C ${DEPLOY_ROOT} -czf ${netroot}.tar.gz 'network'
+  rm -rf ${netroot}
   # Remove trap
   trap - ERR
 }
