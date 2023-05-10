@@ -32,7 +32,7 @@ install_necessary_packages() {
   trap 'exit 1' ERR
   # Install packages
   sudo apt-get update
-  sudo apt-get install -y git make python3 python3-pip wget libtool-bin libboost-all-dev
+  sudo apt-get install -y git make python3 python3-pip wget libtool-bin libboost-all-dev jq
   # Remove trap
   trap - ERR
 }

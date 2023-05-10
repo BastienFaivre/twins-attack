@@ -68,6 +68,7 @@ prepare() {
   rm -rf ${DEPLOY_ROOT}
   mkdir -p ${DEPLOY_ROOT}
   # Create prepare directory
+  rm -rf ${PREPARE_ROOT}
   mkdir -p ${PREPARE_ROOT}
   # Remove trap
   trap - ERR
@@ -286,16 +287,58 @@ generate_chainconfig() {
   trap - ERR
 }
 
+generate_accounts() {
+  # Catch errors
+  trap 'exit 1' ERR
+  # Retrieve arguments
+  local netroot=${1}
+  local accountnum=${2}
+  mkdir -p "${netroot}/accounts"
+  # Generate accounts
+  for i in $(seq 1 ${accountnum}); do
+    wallet_output=$(algokey generate)
+    private_key=$(echo "$wallet_output" | grep "Private key mnemonic" | cut -d ':' -f 2- | xargs)
+    public_key=$(echo "$wallet_output" | grep "Public key" | cut -d ':' -f 2 | xargs)
+    echo "${private_key}" > "${netroot}/accounts/account-$(( i - 1 )).sk"
+    echo "${public_key}" > "${netroot}/accounts/account-$(( i - 1 )).pk"
+  done
+  find "${netroot}" -type f -name "genesis.json" | while read -r filepath; do
+    genesis=$(cat "${filepath}")
+    echo "Adding accounts to genesis file $filepath"
+    find "${netroot}/accounts" -type f -name "account-*.pk" | while read -r pubkey_file; do
+      echo "Adding account $pubkey_file to genesis"
+      pubkey=$(cat "${pubkey_file}")
+      jq ".alloc += [
+    {
+      "addr": \"${pubkey}\",
+      "comment": \"wallet_${pubkey}\",
+      "state": {
+        "algo": 1000000000000000,
+        "onl": 1
+      }
+    }
+  ]"  <<< "$genesis" > "$filepath"
+    genesis=$(cat "${filepath}")
+    done
+  done
+  # Remove trap
+  trap - ERR
+}
+
+
+
+
 generate() {
   # Catch errors
   trap 'exit 1' ERR
   # Retrieve arguments
-  if [ $# -ne 1 ]; then
-    echo "Usage: $0 generate <nodefile>"
+  if [ $# -ne 2 ]; then
+    echo "Usage: $0 generate <nodefile> <account number>"
     trap - ERR
     exit 1
   fi
   local nodefile=${1}
+  local accountnum=${2}
   local template=${DEPLOY_ROOT}/template.json
   local logfile=${DEPLOY_ROOT}/generate.log
   local netroot=${NETWORK_ROOT}
@@ -319,6 +362,7 @@ generate() {
       trap - ERR
       exit 1
     fi
+    rm ${template}
     kill_kmd_processes ${prepared_path}
     generate_chainconfig ${prepared_path} ${nodefile}
     generate_algod_tokens ${prepared_path} ${nodefile}
@@ -330,9 +374,10 @@ generate() {
   cp -r ${prepared_path} ${netroot}
   set_goal_network_address ${netroot} ${nodefile}
   generate_start_scripts ${netroot} ${nodefile}
-  cp ${netroot}/accounts.yaml ${DEPLOY_ROOT}/accounts.yaml
+  generate_accounts ${netroot} ${accountnum}
   tar -C ${DEPLOY_ROOT} -czf ${netroot}.tar.gz 'network'
   rm -rf ${netroot}
+  rm -rf ${prepared_path}
   # Remove trap
   trap - ERR
 }
@@ -359,8 +404,7 @@ case ${action} in
     ;;
   'generate')
     cmd="generate $@"
-    # utils::exec_cmd "${cmd}" 'Generate configuration files'
-    ${cmd}
+    utils::exec_cmd "${cmd}" 'Generate configuration files'
     ;;
   *)
     echo "Usage: $0 <action> [options...]"
