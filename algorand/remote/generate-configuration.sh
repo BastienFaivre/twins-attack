@@ -82,44 +82,44 @@ function build_network_template() {
   local nodefile="$2"
   local nodenum=$(wc -l < ${nodefile})
   local walletnum=$nodenum
-  local share=$(echo "scale=2; 100.0 / $walletnum" | bc)
-  local rem=$(echo "scale=2; 100.0 - ($share * $walletnum)" | bc)
-  echo "{" > "$path"
-  echo '    "Genesis": {' >> "$path"
-  echo '        "NetworkName": "PrivateNet",' >> "$path"
-  echo '        "Wallets": [' >> "$path"
+  local share=$(echo "scale=2; 100.0 / ${walletnum}" | bc)
+  local rem=$(echo "scale=2; 100.0 - (${share} * ${walletnum})" | bc)
+  echo "{" > "${path}"
+  echo '    "Genesis": {' >> "${path}"
+  echo '        "NetworkName": "PrivateNet",' >> "${path}"
+  echo '        "Wallets": [' >> "${path}"
   local sep=""
   for ((i = 0; i < walletnum; i++)); do
-    if [ $i -eq 0 ]; then
-      stake=$(echo "scale=2; $share + $rem" | bc)
+    if [ ${i} -eq 0 ]; then
+      stake=$(echo "scale=2; ${share} + ${rem}" | bc)
     else
-      stake=$share
+      stake=${share}
     fi
-    echo -n "$sep" >> "$path"
-    cat << EOF >> "$path"
+    echo -n "${sep}" >> "${path}"
+    cat << EOF >> "${path}"
       {
-        "Name": "wallet_$i",
-        "Stake": $stake,
+        "Name": "wallet_${i}",
+        "Stake": ${stake},
         "Online": true
       }
 EOF
     sep=','
   done
 
-  echo '        ]' >> "$path"
-  echo '    },' >> "$path"
-  echo '    "Nodes": [' >> "$path"
+  echo '        ]' >> "${path}"
+  echo '    },' >> "${path}"
+  echo '    "Nodes": [' >> "${path}"
   sep=""
   for ((i = 0; i < walletnum; i++)); do
-    name="n$i"
-    printf "%s" "$sep" >> "$path"
-    cat << EOF >> "$path"
+    name="n${i}"
+    printf "%s" "${sep}" >> "${path}"
+    cat << EOF >> "${path}"
     {
-      "Name": "$name",
+      "Name": "${name}",
       "IsRelay": true,
       "Wallets": [
         {
-          "Name": "wallet_$i",
+          "Name": "wallet_${i}",
           "ParticipationOnly": false
         }
       ]
@@ -128,8 +128,8 @@ EOF
     sep=","
   done
 
-  echo '    ]' >> "$path"
-  echo "}" >> "$path"
+  echo '    ]' >> "${path}"
+  echo "}" >> "${path}"
   # Remove trap
   trap - ERR
 }
@@ -287,6 +287,16 @@ generate_chainconfig() {
   trap - ERR
 }
 
+# Generate accounts
+# Globals:
+#   None
+# Arguments:
+#   $1: network root directory
+#   $2: account number
+# Outputs:
+#   None
+# Returns:
+#   None
 generate_accounts() {
   # Catch errors
   trap 'exit 1' ERR
@@ -297,16 +307,16 @@ generate_accounts() {
   # Generate accounts
   for i in $(seq 1 ${accountnum}); do
     wallet_output=$(algokey generate)
-    private_key=$(echo "$wallet_output" | grep "Private key mnemonic" | cut -d ':' -f 2- | xargs)
-    public_key=$(echo "$wallet_output" | grep "Public key" | cut -d ':' -f 2 | xargs)
+    private_key=$(echo "${wallet_output}" | grep "Private key mnemonic" | cut -d ':' -f 2- | xargs)
+    public_key=$(echo "${wallet_output}" | grep "Public key" | cut -d ':' -f 2 | xargs)
     echo "${private_key}" > "${netroot}/accounts/account-$(( i - 1 )).sk"
     echo "${public_key}" > "${netroot}/accounts/account-$(( i - 1 )).pk"
   done
   find "${netroot}" -type f -name "genesis.json" | while read -r filepath; do
     genesis=$(cat "${filepath}")
-    echo "Adding accounts to genesis file $filepath"
+    echo "Adding accounts to genesis file ${filepath}"
     find "${netroot}/accounts" -type f -name "account-*.pk" | while read -r pubkey_file; do
-      echo "Adding account $pubkey_file to genesis"
+      echo "Adding account ${pubkey_file} to genesis"
       pubkey=$(cat "${pubkey_file}")
       jq ".alloc += [
     {
@@ -317,7 +327,7 @@ generate_accounts() {
         "onl": 1
       }
     }
-  ]"  <<< "$genesis" > "$filepath"
+  ]"  <<< "${genesis}" > "${filepath}"
     genesis=$(cat "${filepath}")
     done
   done
@@ -325,9 +335,16 @@ generate_accounts() {
   trap - ERR
 }
 
-
-
-
+# Generate the configuration files
+# Globals:
+#   None
+# Arguments:
+#   $1: nodefile
+#   $2: account number
+# Outputs:
+#   None
+# Returns:
+#   None
 generate() {
   # Catch errors
   trap 'exit 1' ERR
