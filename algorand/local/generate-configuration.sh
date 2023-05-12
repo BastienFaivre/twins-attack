@@ -90,8 +90,15 @@ create_node_configuration() {
     if [ ! -d ${dir} ] || [[ ${dir} == *"twin"* ]]; then
       continue
     fi
+    rm -rf ./tmp/tmp
+    mkdir -p ./tmp/tmp
+    # Copy the node directory
+    cp -r ${dir} ./tmp/tmp
+    cp -r ${dir}_twin ./tmp/tmp
     # Archive the node directory
-    tar -czf ${dir}.tar.gz -C "$(dirname "${dir}")" "$(basename "${dir}")"
+    tar -czf ${dir}.tar.gz -C ./tmp/tmp .
+    # Remove the tmp directory
+    rm -rf ./tmp/tmp
   done
   # Remove trap
   trap - ERR
@@ -130,7 +137,7 @@ send_configuration_files() {
       exit 1
     fi
     # untar the configuration file
-    ssh -p ${port} ${hostname} "cd ~/deploy/algorand; tar -xzf ${config##*/}"
+    ssh -p ${port} ${hostname} "cd ~/deploy/algorand; tar -xzf ${config##*/} --strip-components=1"
     # increment the index
     index=$((index + 1))
   done

@@ -183,14 +183,24 @@ set_goal_network_address() {
   for i in $(seq 1 ${nodenum}); do
     peerport=$(sed -n "${i}p" ${nodefile} | cut -d: -f2)
     clientport=$(sed -n "${i}p" ${nodefile} | cut -d: -f3)
+    peerporttwin=$(sed -n "${i}p" ${nodefile} | cut -d: -f4)
+    clientporttwin=$(sed -n "${i}p" ${nodefile} | cut -d: -f5)
     sed -ri 's/"NetAddress":.*/"NetAddress": "'"0.0.0.0:${peerport}"'",/' \
         "${netroot}/n$(( i - 1 ))/config.json"
+    sed -ri 's/"NetAddress":.*/"NetAddress": "'"0.0.0.0:${peerporttwin}"'",/' \
+        "${netroot}/n$(( i - 1 ))_twin/config.json"
     sed -ri 's/\{/\{\n\t"ConnectionsRateLimitingWindowSeconds": 0,/' \
         "${netroot}/n$(( i - 1 ))/config.json"
+    sed -ri 's/\{/\{\n\t"ConnectionsRateLimitingWindowSeconds": 0,/' \
+        "${netroot}/n$(( i - 1 ))_twin/config.json"
     sed -ri 's/\{/\{\n\t"EndpointAddress": "'":${clientport}"'",/' \
         "${netroot}/n$(( i - 1 ))/config.json"
+    sed -ri 's/\{/\{\n\t"EndpointAddress": "'":${clientporttwin}"'",/' \
+        "${netroot}/n$(( i - 1 ))_twin/config.json"
     sed -ri 's/\{/\{\n\t"EnableDeveloperAPI": true,/' \
         "${netroot}/n$(( i - 1 ))/config.json"
+    sed -ri 's/\{/\{\n\t"EnableDeveloperAPI": true,/' \
+        "${netroot}/n$(( i - 1 ))_twin/config.json"
   done
   # Remove trap
   trap - ERR
@@ -226,10 +236,36 @@ generate_start_scripts() {
         "'${peers}'"
       fi
     ) > "${netroot}/n$(( i - 1 ))/start.sh"
+    (
+      echo "#!/bin/bash"
+      if [ "x${peerstwin}" = 'x' ]; then
+        echo 'exec goal node start --datadir "${0%/*}"'
+      else
+        echo 'exec goal node start --datadir "${0%/*}" --peer' \
+        "'${peerstwin}'"
+      fi
+    ) > "${netroot}/n$(( i - 1 ))_twin/start.sh"
     chmod +x "${netroot}/n$(( i - 1 ))/start.sh"
+    chmod +x "${netroot}/n$(( i - 1 ))_twin/start.sh"
     addr=$(sed -n "${i}p" ${nodefile} | cut -d: -f1,2)
+    addr_twin=$(sed -n "${i}p" ${nodefile} | cut -d: -f1,4)
     peers="${peers}${sep}${addr}"
+    peerstwin="${peerstwin}${sep}${addr_twin}"
     sep=';'
+  done
+  # Remove trap
+  trap - ERR
+}
+
+create_twins_nodes() {
+  # Catch errors
+  trap 'exit 1' ERR
+  # Retrieve arguments
+  local netroot=${1}
+  # Create twins nodes
+  for dir in ${netroot}/n*; do
+    twin_dir="${dir}_twin"
+    cp -r "${dir}" "${twin_dir}"
   done
   # Remove trap
   trap - ERR
@@ -389,6 +425,7 @@ generate() {
     rm ${prepared_path}/*.partkey*
   fi
   cp -r ${prepared_path} ${netroot}
+  create_twins_nodes ${netroot}
   set_goal_network_address ${netroot} ${nodefile}
   generate_start_scripts ${netroot} ${nodefile}
   generate_accounts ${netroot} ${accountnum}

@@ -37,6 +37,8 @@ export() {
     --exclude '.*' \
     --exclude 'node/' \
     --exclude 'quorum/' \
+    --exclude 'client/' \
+    --exclude 'algorand/' \
     --exclude 'README.md' \
     . ${HOST}:~/go/src/semester-project
   # Remove trap

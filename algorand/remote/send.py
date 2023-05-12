@@ -7,20 +7,20 @@
 
 import argparse
 from algosdk.v2client import algod
-from algosdk import transaction, mnemonic
+from algosdk import transaction, mnemonic, account
 
 # Read arguments
 parser = argparse.ArgumentParser('Send Algos from one account to another')
 parser.add_argument('-d', '--algod_address', type=str, help='Algod address', default='http://localhost:8022')
 parser.add_argument('-t', '--algod_token', type=str, help='Algod token', default='a' * 64)
-parser.add_argument('-p', '--sender_mnemonic', type=str, help='Private mnemonic of the sender account')
-parser.add_argument('-r', '--receiver', type=str, help='Receiver account address')
+parser.add_argument('-p', '--sender_mnemonic', type=str, help='Private mnemonic of the sender account', required=True)
+parser.add_argument('-r', '--receiver', type=str, help='Receiver account address', required=True)
 parser.add_argument('-a', '--amount', type=int, help='Amount of Algos to send', default=1000000) # 1 Algo
 args = parser.parse_args()
 
 # Get private and public keys from the mnemonic
-private_key = mnemonic.to_private_key(args.private_mnemonic)
-public_key = mnemonic.to_public_key(args.private_mnemonic)
+private_key = mnemonic.to_private_key(args.sender_mnemonic)
+public_key = account.address_from_private_key(private_key)
 
 # Connect to the Algod client
 algod_client = algod.AlgodClient(args.algod_token, args.algod_address)
