@@ -39,7 +39,7 @@ txid = algod_client.send_transaction(signed_txn)
 print("Transaction ID: {}".format(txid))
 
 # Wait for the transaction to be confirmed
-txn_result = transaction.wait_for_confirmation(algod_client, txid, 4)
+txn_result = transaction.wait_for_confirmation(algod_client, txid, 10)
 print("Transaction information: {}".format(txn_result))
 
 # Get sender and receiver account information
