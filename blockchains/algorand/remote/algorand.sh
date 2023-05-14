@@ -11,8 +11,8 @@
 # IMPORTS
 #===============================================================================
 
-. remote/remote.env
-. utils/utils.sh
+. blockchains/algorand/remote/remote.env
+. scripts/utils.sh
 
 #===============================================================================
 # FUNCTIONS

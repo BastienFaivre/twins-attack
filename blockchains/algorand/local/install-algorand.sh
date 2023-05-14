@@ -10,8 +10,9 @@
 # IMPORTS
 #===============================================================================
 
-. ../../../utils/local/local.env
-. ../../../utils/utils.sh
+cd "$(dirname "$0")"
+. ../../../scripts/local/local.env
+. ../../../scripts/utils.sh
 
 #===============================================================================
 # MAIN
@@ -21,7 +22,7 @@
 trap 'exit 1' ERR
 
 hosts_array=($(utils::create_remote_hosts_list ${HOST} ${PORT} ${NUMBER_OF_HOSTS}))
-utils::exec_cmd_on_remote_hosts './remote/install-algorand.sh' 'Install algorand on remote hosts' "${hosts_array[@]}"
+utils::exec_cmd_on_remote_hosts './blockchains/algorand/remote/install-algorand.sh' 'Install algorand on remote hosts' "${hosts_array[@]}"
 
 # Remove trap
 trap - ERR

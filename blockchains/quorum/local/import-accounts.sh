@@ -10,8 +10,9 @@
 # IMPORTS
 #===============================================================================
 
-. ../../../utils/local/local.env
-. ../../../utils/utils.sh
+cd "$(dirname "$0")"
+. ../../../scripts/local/local.env
+. ../../../scripts/utils.sh
 
 #===============================================================================
 # FUNCTIONS
@@ -125,7 +126,7 @@ utils::exec_cmd 'create_node_accounts_file' 'Create node accounts file'
 hosts_array=($(utils::create_remote_hosts_list ${HOST} ${PORT} ${NUMBER_OF_HOSTS}))
 cmd="send_accounts_file ${hosts_array[@]}"
 utils::exec_cmd "${cmd}" 'Send accounts file'
-utils::exec_cmd_on_remote_hosts './remote/import-accounts.sh deploy/quorum-ibft/accounts.txt' 'Import accounts' "${hosts_array[@]}"
+utils::exec_cmd_on_remote_hosts './blockchains/quorum/remote/import-accounts.sh deploy/quorum-ibft/accounts.txt' 'Import accounts' "${hosts_array[@]}"
 
 # Remove trap
 trap - ERR

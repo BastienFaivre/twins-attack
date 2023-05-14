@@ -10,8 +10,9 @@
 # IMPORTS
 #===============================================================================
 
-. ../../../utils/local/local.env
-. ../../../utils/utils.sh
+cd "$(dirname "$0")"
+. ../../../scripts/local/local.env
+. ../../../scripts/utils.sh
 
 #===============================================================================
 # FUNCTIONS
@@ -160,9 +161,9 @@ number_of_accounts=${1}
 trap 'exit 1' ERR
 
 hosts_array=($(utils::create_remote_hosts_list ${HOST} ${PORT} ${NUMBER_OF_HOSTS}))
-utils::exec_cmd_on_remote_hosts './remote/generate-configuration.sh prepare' 'Preparing remote hosts' "${hosts_array[@]}"
+utils::exec_cmd_on_remote_hosts './blockchains/algorand/remote/generate-configuration.sh prepare' 'Preparing remote hosts' "${hosts_array[@]}"
 host=${hosts_array[0]}
-utils::exec_cmd_on_remote_hosts "./remote/generate-configuration.sh generate remote/nodefile.txt ${number_of_accounts}" 'Generating configuration' "${host}"
+utils::exec_cmd_on_remote_hosts "./blockchains/algorand/remote/generate-configuration.sh generate blockchains/algorand/remote/nodefile.txt ${number_of_accounts}" 'Generating configuration' "${host}"
 cmd="retrieve_configuration ${host}"
 utils::exec_cmd "${cmd}" 'Retrieving configuration file'
 utils::exec_cmd 'extract_configuration' 'Extracting configuration file'

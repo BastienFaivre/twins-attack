@@ -11,8 +11,8 @@
 # IMPORTS
 #===============================================================================
 
-. remote/remote.env
-. utils/utils.sh
+. blockchains/algorand/remote/remote.env
+. scripts/utils.sh
 
 #===============================================================================
 # FUNCTIONS
@@ -113,7 +113,7 @@ clone_and_build_algorand() {
   mkdir ${INSTALL_ROOT}/algorand-tools
   (
     cd ${INSTALL_ROOT}/algorand-tools
-    cp ~/remote/main.go .
+    cp ~/blockchains/algorand/remote/main.go .
     go mod init "algorand-chainfile-generator"
     go mod tidy
     go build -o algorand-chainfile-generator

@@ -10,8 +10,8 @@
 # IMPORTS
 #===============================================================================
 
-. remote/remote.env
-. utils/utils.sh
+. blockchains/quorum/remote/remote.env
+. scripts/utils.sh
 
 #===============================================================================
 # FUNCTIONS

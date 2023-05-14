@@ -22,7 +22,7 @@ cd "$(dirname "$0")"
 trap 'exit 1' ERR
 
 hosts_array=($(utils::create_remote_hosts_list ${HOST} ${PORT} ${NUMBER_OF_HOSTS}))
-utils::exec_cmd_on_remote_hosts './remote/update.sh' 'Update remote hosts' "${hosts_array[@]}"
+utils::exec_cmd_on_remote_hosts './scripts/remote/update.sh' 'Update remote hosts' "${hosts_array[@]}"
 
 # Remove trap
 trap - ERR

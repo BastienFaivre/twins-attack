@@ -10,8 +10,9 @@
 # IMPORTS
 #===============================================================================
 
-. ../../../utils/local/local.env
-. ../../../utils/utils.sh
+cd "$(dirname "$0")"
+. ../../../scripts/local/local.env
+. ../../../scripts/utils.sh
 
 #===============================================================================
 # FUNCTIONS
@@ -164,15 +165,15 @@ send_configuration_files() {
 trap 'exit 1' ERR
 
 hosts_array=($(utils::create_remote_hosts_list ${HOST} ${PORT} ${NUMBER_OF_HOSTS}))
-utils::exec_cmd_on_remote_hosts './remote/generate-configuration.sh prepare' 'Preparing remote hosts' "${hosts_array[@]}"
+utils::exec_cmd_on_remote_hosts './blockchains/quorum/remote/generate-configuration.sh prepare' 'Preparing remote hosts' "${hosts_array[@]}"
 host=${hosts_array[0]}
-utils::exec_cmd_on_remote_hosts './remote/generate-configuration.sh generate remote/nodefile.txt install/geth-accounts/accounts.txt' 'Generating configuration file' ${host}
+utils::exec_cmd_on_remote_hosts './blockchains/quorum/remote/generate-configuration.sh generate blockchains/quorum/remote/nodefile.txt install/geth-accounts/accounts.txt' 'Generating configuration file' ${host}
 cmd="retrieve_configuration ${host}"
 utils::exec_cmd "${cmd}" 'Retrieving configuration file'
 utils::exec_cmd 'extract_configuration' 'Extracting configuration file'
 utils::exec_cmd 'create_node_configuration' 'Creating node configuration files'
 cmd="send_configuration_files ${hosts_array[@]}"
 utils::exec_cmd "${cmd}" 'Sending configuration files'
-utils::exec_cmd_on_remote_hosts './remote/generate-configuration.sh finalize' 'Finalizing configuration' "${hosts_array[@]}"
+utils::exec_cmd_on_remote_hosts './blockchains/quorum/remote/generate-configuration.sh finalize' 'Finalizing configuration' "${hosts_array[@]}"
 
 trap - ERR

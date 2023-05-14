@@ -11,8 +11,8 @@
 # IMPORTS
 #===============================================================================
 
-. remote/remote.env
-. utils/utils.sh
+. blockchains/quorum/remote/remote.env
+. scripts/utils.sh
 
 #===============================================================================
 # FUNCTIONS
@@ -137,7 +137,7 @@ generate_accounts() {
         keypath=${ACCOUNTS_ROOT}/${i}/keystore/${keypath}
         local address=${keypath##*--}
         echo ${address} > ${ACCOUNTS_ROOT}/${i}/address
-        ./remote/extract.py ${keypath} ${i} > ${ACCOUNTS_ROOT}/${i}/private
+        ./blockchains/quorum/remote/extract.py ${keypath} ${i} > ${ACCOUNTS_ROOT}/${i}/private
         rm -rf ${ACCOUNTS_ROOT}/${i}/keystore
       ) &
     done

@@ -30,17 +30,36 @@ cd "$(dirname "$0")"
 export() {
   # Catch errors
   trap 'exit 1' ERR
-  # Create directory
-  ssh -p ${PORT} ${HOST} 'mkdir -p ~/go/src/semester-project'
+  # Move to the root directory
+  cd ../..
   # Export
-  rsync -rav -e "ssh -p ${PORT}" \
-    --exclude '.*' \
-    --exclude 'node/' \
-    --exclude 'quorum/' \
-    --exclude 'client/' \
-    --exclude 'algorand/' \
-    --exclude 'README.md' \
-    . ${HOST}:~/go/src/semester-project
+  for i in $(seq 0 $((NUMBER_OF_HOSTS - 1)))
+  do
+    (
+      # Export blockchains remote directory
+      rsync -rav -e "ssh -p $((PORT + i))" \
+        blockchains/ \
+        --exclude '*/local/' \
+        ${HOST}:~/blockchains
+      # Export scripts
+      ssh -p $((PORT + i)) ${HOST} 'mkdir -p ~/scripts'
+      rsync -rav -e "ssh -p $((PORT + i))" \
+        scripts/ \
+        --exclude 'local/' \
+        ${HOST}:~/scripts
+      # Export controller
+      ssh -p $((PORT + i)) ${HOST} 'mkdir -p ~/go/src/controller'
+      rsync -rav -e "ssh -p $((PORT + i))" \
+        controller/ \
+        ${HOST}:~/go/src/controller
+      # Export proxy
+      ssh -p $((PORT + i)) ${HOST} 'mkdir -p ~/go/src/proxy'
+      rsync -rav -e "ssh -p $((PORT + i))" \
+        proxy/ \
+        ${HOST}:~/go/src/proxy
+    ) &
+  done
+  wait
   # Remove trap
   trap - ERR
 }
