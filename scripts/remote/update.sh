@@ -3,22 +3,21 @@
 # Author: Bastien Faivre
 # Project: EPFL Master Semester Project
 # Date: March 2023
-# Description: Export the client, controller, and proxy to the remote host
-#              $HOST:$PORT (see quorum/local/local.env)
+# Description: Update the host
 #===============================================================================
 
 #===============================================================================
 # IMPORTS
 #===============================================================================
 
-. quorum/local/local.env
-. quorum/local/utils/utils.sh
+. remote/remote.env
+. utils/utils.sh
 
 #===============================================================================
 # FUNCTIONS
 #===============================================================================
 
-# Export the client, controller, and proxy to the remote host $HOST:$PORT
+# Update the host
 # Globals:
 #   None
 # Arguments:
@@ -27,20 +26,16 @@
 #   None
 # Returns:
 #   None
-export() {
+update_host() {
   # Catch errors
   trap 'exit 1' ERR
-  # Create directory
-  ssh -p ${PORT} ${HOST} 'mkdir -p ~/go/src/semester-project'
-  # Export
-  rsync -rav -e "ssh -p ${PORT}" \
-    --exclude '.*' \
-    --exclude 'node/' \
-    --exclude 'quorum/' \
-    --exclude 'client/' \
-    --exclude 'algorand/' \
-    --exclude 'README.md' \
-    . ${HOST}:~/go/src/semester-project
+  # Update
+  sudo apt-get update
+  sudo apt-get --with-new-pkgs upgrade -y
+  sudo apt-get clean
+  sudo apt-get autoclean
+  sudo apt-get autoremove --purge -y
+  sudo snap refresh
   # Remove trap
   trap - ERR
 }
@@ -52,7 +47,8 @@ export() {
 # Catch errors
 trap 'exit 1' ERR
 
-utils::exec_cmd 'export' "Export files to ${HOST}:${PORT}"
+utils::ask_sudo
+utils::exec_cmd 'update_host' 'Update host'
 
 # Remove trap
 trap - ERR

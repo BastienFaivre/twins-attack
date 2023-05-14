@@ -2,16 +2,17 @@
 #===============================================================================
 # Author: Bastien Faivre
 # Project: EPFL Master Semester Project
-# Date: May 2023
-# Description: Clean the remote hosts
+# Date: March 2023
+# Description: Update the remote hosts
 #===============================================================================
 
 #===============================================================================
 # IMPORTS
 #===============================================================================
 
+cd "$(dirname "$0")"
 . local.env
-. utils/utils.sh
+. ../utils.sh
 
 #===============================================================================
 # MAIN
@@ -21,8 +22,7 @@
 trap 'exit 1' ERR
 
 hosts_array=($(utils::create_remote_hosts_list ${HOST} ${PORT} ${NUMBER_OF_HOSTS}))
-cmd='sudo rm -rf *; sudo rm -rf /usr/local/go; sed -i "/\/usr\/local\/go/d" ~/.profile'
-utils::exec_cmd_on_remote_hosts "${cmd}" 'Clean remote hosts' "${hosts_array[@]}"
+utils::exec_cmd_on_remote_hosts './remote/update.sh' 'Update remote hosts' "${hosts_array[@]}"
 
 # Remove trap
 trap - ERR
