@@ -88,10 +88,10 @@ This repository contains the code to set up and simulate a twin attack on variou
 
     - Algorand:
 
-        Execute the `send.py` script that will sends a transaction from Alice to Bob (in other words, from one wallet to another):
+        Execute the `./blockchains/algorand/remote/send.py` script remotely that will sends a transaction from Alice to Bob (in other words, from one wallet to another):
 
         ```bash
-        python3 send.py --aldod_address http://<node hostname>:<node port> --sender_mnemonic <Alice mnemonic> --receiver <Bob address> --amount <Amount>
+        python3 ./blockchains/algorand/remote/send.py --aldod_address http://<node hostname>:<node port> --sender_mnemonic <Alice mnemonic> --receiver <Bob address> --amount <Amount>
         ```
 
         Then, send a curl request to the proxy, and ask for the transaction receipt or Bob's balance:
