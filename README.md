@@ -69,4 +69,36 @@ This repository contains the code to set up and simulate a twin attack on variou
 
 4. Attack execution
 
-    To be completed...
+    - Quorum:
+
+        Initiate a Geth connection to a node of one node of one of the blockchains, then execute a transaction from Alice to Bob (in other words, from one wallet to another):
+
+        ```bash
+        geth attach http://<node hostname>:<node port>
+        > eth.sendTransaction({from: <Alice account>, to: <Bob account>, value: web3.toWei(<Amount>, "ether")})
+        ```
+
+        Then, initiate a Geth connection to the proxy, and ask for the transaction receipt or Bob's balance:
+
+        ```bash
+        geth attach http://<proxy hostname>:<proxy port>
+        > eth.getTransactionByHash(<transaction hash>)
+        > eth.getBalance(<Bob account>)
+        ```
+
+    - Algorand:
+
+        Execute the `send.py` script that will sends a transaction from Alice to Bob (in other words, from one wallet to another):
+
+        ```bash
+        python3 send.py --aldod_address http://<node hostname>:<node port> --sender_mnemonic <Alice mnemonic> --receiver <Bob address> --amount <Amount>
+        ```
+
+        Then, send a curl request to the proxy, and ask for the transaction receipt or Bob's balance:
+
+        ```bash
+        curl -H "X-Algo-API-Token: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" http://<proxy hostname>:<proxy port>/v2/transactions/pending/<Transaction id>
+        curl -H "X-Algo-API-Token: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" http://<proxy hostname>:<proxy port>/v2/accounts/<Bob address>
+        ```
+
+    Since the proxy redirects to the blockchain where the transaction exists, the transaction receipt and Bob's balance should be available. But on the other blockchain, assuming the real one, the transaction should not exist and Bob's balance should not have changed. Bob has been successfully tricked by Alice.
