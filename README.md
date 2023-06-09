@@ -2,7 +2,7 @@
 
 ## Overview
 
-This repository contains the code to set up and simulate a twin attack on various blockchains. The attack is described in the paper [TBD](https://www.youtube.com/watch?v=dQw4w9WgXcQ).
+This repository contains the code to set up and simulate a twin attack on various blockchains. The attack is described in my [paper](https://github.com/BastienFaivre/twins-attack/blob/main/paper.pdf).
 
 ### Current Blockchains
 
